@@ -261,6 +261,62 @@ class Program
         return $"notion-record-{investorDomain.Replace(".", "-")}";
     }
 
+    static async Task<string?> FindAttioRecord(HttpClient client, string investorDomain)
+    {
+        try
+        {
+            Console.WriteLine($"🔍 Searching for company record matching {investorDomain}...");
+            
+            // Query Attio companies using domains filter
+            var queryBody = new
+            {
+                filter = new
+                {
+                    domains = investorDomain
+                }
+            };
+            
+            string queryJson = System.Text.Json.JsonSerializer.Serialize(queryBody);
+            var queryContent = new StringContent(queryJson, Encoding.UTF8, "application/json");
+            
+            HttpResponseMessage response = await client.PostAsync("https://api.attio.com/v2/objects/companies/records/query", queryContent);
+            string responseBody = await response.Content.ReadAsStringAsync();
+            
+            if (response.IsSuccessStatusCode)
+            {
+                JsonNode node = JsonNode.Parse(responseBody);
+                var records = node?["data"]?.AsArray();
+                
+                if (records != null && records.Count > 0)
+                {
+                    // Get the first matching record
+                    var firstRecord = records[0];
+                    string? recordId = firstRecord?["id"]?["record_id"]?.ToString();
+                    string? companyName = firstRecord?["values"]?["name"]?.AsArray()?[0]?["value"]?.ToString();
+                    
+                    if (!string.IsNullOrEmpty(recordId))
+                    {
+                        Console.WriteLine($"✅ Found company record: {companyName ?? "Unknown"} (ID: {recordId})");
+                        return recordId;
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine($"❌ Failed to search company records: {response.StatusCode}");
+                Console.WriteLine($"Response: {responseBody}");
+            }
+            
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error searching Attio company records: {ex.Message}");
+            return null;
+        }
+    }
+    
+    // Wrapper for main workflow validation
     static async Task<string> FindAttioRecord(string investorDomain)
     {
         string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
@@ -272,28 +328,7 @@ class Program
         using (HttpClient client = new HttpClient())
         {
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
-
-            try
-            {
-                Console.WriteLine($"🔍 Searching for company record matching {investorDomain}...");
-                
-                // TODO: Implement company record search
-                // This will involve:
-                // 1. Query https://api.attio.com/v2/objects/companies/records/query
-                // 2. Search for records matching the domain in name, domain, or website fields
-                // 3. Return the company record ID if found
-                
-                Console.WriteLine($"[PLACEHOLDER] Would search Attio companies for {investorDomain}");
-                
-                // For now, return a placeholder to simulate finding a record
-                // In real implementation, return the actual company record ID or null
-                return $"company-record-{investorDomain.Replace(".", "-")}"; // Placeholder
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error searching Attio company records: {ex.Message}");
-                return null;
-            }
+            return await FindAttioRecord(client, investorDomain);
         }
     }
 
@@ -341,13 +376,17 @@ class Program
             {
                 Console.WriteLine($"🔍 Searching for {investorDomain} in Attio company records...");
                 
-                // TODO: Search for company records matching the domain
-                // This will involve:
-                // 1. Query the companies object to find records matching the domain
-                // 2. Update the base company record with the Notion Research URL field
-                // 3. No longer dealing with list-specific records
+                // Step 1: Find the company record by searching
+                string? companyRecordId = await FindAttioRecord(client, investorDomain);
                 
-                bool updated = await UpdateAttioCompanyRecord(client, investorDomain, notionUrl);
+                if (companyRecordId == null)
+                {
+                    Console.WriteLine($"⚠️  No company records found for {investorDomain}");
+                    return;
+                }
+                
+                // Step 2: Update the company record with the found record ID
+                bool updated = await UpdateAttioCompanyRecord(client, companyRecordId, notionUrl);
                 
                 if (updated)
                 {
@@ -355,7 +394,7 @@ class Program
                 }
                 else
                 {
-                    Console.WriteLine($"⚠️  No company records found for {investorDomain}");
+                    Console.WriteLine($"❌ Failed to update company record");
                 }
             }
             catch (Exception ex)
@@ -365,26 +404,46 @@ class Program
         }
     }
     
-    static async Task<bool> UpdateAttioCompanyRecord(HttpClient client, string investorDomain, string notionUrl)
+    static async Task<bool> UpdateAttioCompanyRecord(HttpClient client, string recordId, string notionUrl)
     {
         try
         {
-            Console.WriteLine($"🔍 Searching for company records matching {investorDomain}...");
+            Console.WriteLine($"🔄 Updating company record (ID: {recordId}) with Notion URL...");
             
-            // TODO: Implement company record search and update
-            // This will involve:
-            // 1. Query https://api.attio.com/v2/objects/companies/records/query
-            //    to find company records matching the domain
-            // 2. Search through company fields (name, domain, website) for matches
-            // 3. Update the matching company record with the Notion Research URL
-            //    using PATCH https://api.attio.com/v2/objects/companies/records/{record_id}
-            // 4. Set the "notion_research_url" field in the company record
+            var updateBody = new
+            {
+                data = new
+                {
+                    values = new Dictionary<string, object[]>
+                    {
+                        ["notion_research_url"] = new object[]
+                        {
+                            new
+                            {
+                                value = notionUrl
+                            }
+                        }
+                    }
+                }
+            };
             
-            Console.WriteLine($"[PLACEHOLDER] Would search for company matching {investorDomain}");
-            Console.WriteLine($"[PLACEHOLDER] Would update company record with URL: {notionUrl}");
+            string updateJson = System.Text.Json.JsonSerializer.Serialize(updateBody);
+            var updateContent = new StringContent(updateJson, Encoding.UTF8, "application/json");
             
-            // For now, return false to indicate no update was performed
-            return false;
+            HttpResponseMessage updateResponse = await client.PatchAsync($"https://api.attio.com/v2/objects/companies/records/{recordId}", updateContent);
+            string updateResponseBody = await updateResponse.Content.ReadAsStringAsync();
+            
+            if (updateResponse.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"✅ Successfully updated company with Notion Research URL");
+                return true;
+            }
+            else
+            {
+                Console.WriteLine($"❌ Failed to update company record: {updateResponse.StatusCode}");
+                Console.WriteLine($"Response: {updateResponseBody}");
+                return false;
+            }
         }
         catch (Exception ex)
         {
