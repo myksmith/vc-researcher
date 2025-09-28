@@ -10,8 +10,7 @@ class Program
 {
     // Global constants
     private const string NOTION_INVESTOR_RESEARCH_DATABASE_ID = "27b6ef03-8cf6-8059-9860-c0ec6873c896";
-    private const string ATTIO_STARTUP_FUNDRAISING_LIST_ID = "978d31e8-588c-443e-be6e-3023d9d2b750";
-    private const string ATTIO_PRESEED_VCS_LIST_ID = "9420a9dd-773d-49b1-be02-e98077c29b94";
+    // Note: We now update company records directly instead of list-specific records
     static async Task Main(string[] args)
     {
         // Environment variable validation - check all required API keys
@@ -130,7 +129,7 @@ class Program
             Console.WriteLine($"🔍 Looking up records for {investorDomain}...");
 
             string notionRecordId = await FindNotionRecord(investorDomain);
-            string attioRecordId = await FindAttioRecord(investorDomain);
+            string attioCompanyId = await FindAttioRecord(investorDomain);
 
             // Early exit if either record is missing
             if (notionRecordId == null)
@@ -139,9 +138,9 @@ class Program
                 return;
             }
 
-            if (attioRecordId == null)
+            if (attioCompanyId == null)
             {
-                Console.WriteLine($"❌ Could not find Attio record for {investorDomain}");
+                Console.WriteLine($"❌ Could not find Attio company record for {investorDomain}");
                 return;
             }
 
@@ -151,18 +150,18 @@ class Program
             string analysis = await QueryPerplexityForVCAnalysis(investorDomain);
             Console.WriteLine("✅ Completed Perplexity analysis");
 
-            // Step 3: Update Notion database
+            // Step 3: Create Notion research page
             string? notionPageUrl = await UpdateNotionDatabase(notionRecordId, investorDomain, analysis);
             if (notionPageUrl == null)
             {
                 Console.WriteLine("❌ Failed to create Notion page - cannot update Attio with URL");
                 return;
             }
-            Console.WriteLine("✅ Updated Notion database");
+            Console.WriteLine("✅ Created Notion research page");
 
-            // Step 4: Update Attio CRM record with the Notion URL
-            await UpdateAttioCRM(attioRecordId, investorDomain, notionPageUrl);
-            Console.WriteLine("✅ Updated Attio CRM");
+            // Step 4: Update Attio company record with the Notion URL
+            await UpdateAttioCRM(attioCompanyId, investorDomain, notionPageUrl);
+            Console.WriteLine("✅ Updated Attio company record");
 
             Console.WriteLine($"🎉 Successfully processed {investorDomain}");
         }
@@ -264,19 +263,38 @@ class Program
 
     static async Task<string> FindAttioRecord(string investorDomain)
     {
-        // Check both lists for the investor record
-        var listIds = await FindAttioBothLists();
-        if (listIds.preseedVCs == null && listIds.startupFundraising == null)
+        string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
+        if (string.IsNullOrEmpty(attioToken))
         {
             return null;
         }
-        
-        // TODO: Search within both lists for records matching the domain
-        // For now, return the first available list ID as a placeholder
-        await Task.Delay(100); // Simulate additional lookup logic
-        
-        // Stubbed: Return first available list ID for now (will need to search within list entries)
-        return listIds.preseedVCs ?? listIds.startupFundraising;
+
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
+
+            try
+            {
+                Console.WriteLine($"🔍 Searching for company record matching {investorDomain}...");
+                
+                // TODO: Implement company record search
+                // This will involve:
+                // 1. Query https://api.attio.com/v2/objects/companies/records/query
+                // 2. Search for records matching the domain in name, domain, or website fields
+                // 3. Return the company record ID if found
+                
+                Console.WriteLine($"[PLACEHOLDER] Would search Attio companies for {investorDomain}");
+                
+                // For now, return a placeholder to simulate finding a record
+                // In real implementation, return the actual company record ID or null
+                return $"company-record-{investorDomain.Replace(".", "-")}"; // Placeholder
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error searching Attio company records: {ex.Message}");
+                return null;
+            }
+        }
     }
 
     static async Task<string?> UpdateNotionDatabase(string recordId, string investorDomain, string analysis)
@@ -321,21 +339,23 @@ class Program
 
             try
             {
-                Console.WriteLine($"🔍 Searching for {investorDomain} in both Attio lists...");
+                Console.WriteLine($"🔍 Searching for {investorDomain} in Attio company records...");
                 
-                // Try to find and update the record in both lists
-                bool updatedStartupFundraising = await UpdateAttioRecord(client, ATTIO_STARTUP_FUNDRAISING_LIST_ID, "Startup Fundraising", investorDomain, notionUrl);
-                bool updatedPreseedVCs = await UpdateAttioRecord(client, ATTIO_PRESEED_VCS_LIST_ID, "Preseed VCs from Notion", investorDomain, notionUrl);
+                // TODO: Search for company records matching the domain
+                // This will involve:
+                // 1. Query the companies object to find records matching the domain
+                // 2. Update the base company record with the Notion Research URL field
+                // 3. No longer dealing with list-specific records
                 
-                if (updatedStartupFundraising || updatedPreseedVCs)
+                bool updated = await UpdateAttioCompanyRecord(client, investorDomain, notionUrl);
+                
+                if (updated)
                 {
                     Console.WriteLine($"✅ Successfully updated Notion Research URL for {investorDomain}");
-                    if (updatedStartupFundraising) Console.WriteLine($"   - Updated in Startup Fundraising list");
-                    if (updatedPreseedVCs) Console.WriteLine($"   - Updated in Preseed VCs from Notion list");
                 }
                 else
                 {
-                    Console.WriteLine($"⚠️  No records found for {investorDomain} in either list");
+                    Console.WriteLine($"⚠️  No company records found for {investorDomain}");
                 }
             }
             catch (Exception ex)
@@ -345,25 +365,30 @@ class Program
         }
     }
     
-    static async Task<bool> UpdateAttioRecord(HttpClient client, string listId, string listName, string investorDomain, string notionUrl)
+    static async Task<bool> UpdateAttioCompanyRecord(HttpClient client, string investorDomain, string notionUrl)
     {
         try
         {
-            // TODO: Search within the list for records matching the domain
-            // For now, this is stubbed as we need to implement the search logic
-            Console.WriteLine($"🔍 Searching for {investorDomain} in {listName} list (ID: {listId})...");
+            Console.WriteLine($"🔍 Searching for company records matching {investorDomain}...");
             
-            // Placeholder: In a real implementation, we would:
-            // 1. Search list entries for records matching the domain
-            // 2. Get the record ID 
-            // 3. Update the "Notion Research URL" field with the notionUrl
+            // TODO: Implement company record search and update
+            // This will involve:
+            // 1. Query https://api.attio.com/v2/objects/companies/records/query
+            //    to find company records matching the domain
+            // 2. Search through company fields (name, domain, website) for matches
+            // 3. Update the matching company record with the Notion Research URL
+            //    using PATCH https://api.attio.com/v2/objects/companies/records/{record_id}
+            // 4. Set the "notion_research_url" field in the company record
             
-            Console.WriteLine($"[STUB] Would update record in {listName} with URL: {notionUrl}");
-            return false; // Return true when actual implementation is complete
+            Console.WriteLine($"[PLACEHOLDER] Would search for company matching {investorDomain}");
+            Console.WriteLine($"[PLACEHOLDER] Would update company record with URL: {notionUrl}");
+            
+            // For now, return false to indicate no update was performed
+            return false;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error updating {listName}: {ex.Message}");
+            Console.WriteLine($"❌ Error updating company record: {ex.Message}");
             return false;
         }
     }
@@ -487,60 +512,7 @@ class Program
         }
     }
 
-    static async Task<(string? preseedVCs, string? startupFundraising)> FindAttioBothLists()
-    {
-        string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
-        if (string.IsNullOrEmpty(attioToken))
-        {
-            return (null, null);
-        }
-
-        using (HttpClient client = new HttpClient())
-        {
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
-
-            try
-            {
-                // List all available lists to find both target lists
-                HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/lists");
-                string responseBody = await response.Content.ReadAsStringAsync();
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    JsonNode node = JsonNode.Parse(responseBody);
-                    var lists = node?["data"]?.AsArray();
-                    
-                    if (lists != null && lists.Count > 0)
-                    {
-                        string? preseedVCsListId = null;
-                        string? startupFundraisingListId = null;
-                        
-                        foreach (var list in lists)
-                        {
-                            string name = list?["name"]?.ToString() ?? "Unknown";
-                            string listId = list?["id"]?["list_id"]?.ToString() ?? "unknown";
-                            
-                            if (name.Contains("Preseed VCs from Notion", StringComparison.OrdinalIgnoreCase))
-                            {
-                                preseedVCsListId = listId;
-                            }
-                            else if (name.Contains("Startup Fundraising", StringComparison.OrdinalIgnoreCase))
-                            {
-                                startupFundraisingListId = listId;
-                            }
-                        }
-                        
-                        return (preseedVCsListId, startupFundraisingListId);
-                    }
-                }
-                return (null, null);
-            }
-            catch
-            {
-                return (null, null);
-            }
-        }
-    }
+    // Note: FindAttioBothLists function removed since we now work with company records directly
 
     static async Task TestAttioList()
     {
