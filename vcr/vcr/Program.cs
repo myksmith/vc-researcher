@@ -17,7 +17,8 @@ class Program
             Console.WriteLine("Example: dotnet run example-vc.com");
             Console.WriteLine("\nTest commands:");
             Console.WriteLine("  dotnet run --test-notion    # Test Notion API connection");
-            Console.WriteLine("  dotnet run --test-attio     # Test Attio API connection");
+            Console.WriteLine("  dotnet run --ping-attio     # Ping Attio API for basic connectivity");
+            Console.WriteLine("  dotnet run --test-attio-list # Test Attio list lookup for 'Preseed VCs from Notion'");
             return;
         }
 
@@ -28,9 +29,15 @@ class Program
             return;
         }
         
-        if (args[0] == "--test-attio")
+        if (args[0] == "--ping-attio")
         {
-            await TestAttioConnection();
+            await PingAttio();
+            return;
+        }
+        
+        if (args[0] == "--test-attio-list")
+        {
+            await TestAttioList();
             return;
         }
 
@@ -168,12 +175,19 @@ class Program
 
     static async Task<string> FindAttioRecord(string investorDomain)
     {
-        // TODO: Search Attio CRM for matching record  
-        // Return record ID if found, null if not found
-        await Task.Delay(100); // Simulate API call
+        // First, find the Preseed VCs list
+        string? listId = await FindAttioPreseedVCsList();
+        if (listId == null)
+        {
+            return null;
+        }
         
-        // Stubbed: Always return a mock record ID for now
-        return $"attio-record-{investorDomain.Replace(".", "-")}";
+        // TODO: Search within the list for records matching the domain
+        // For now, return the list ID as a placeholder
+        await Task.Delay(100); // Simulate additional lookup logic
+        
+        // Stubbed: Return list ID for now (will need to search within list entries)
+        return listId;
     }
 
     static async Task UpdateNotionDatabase(string recordId, string investorDomain, string analysis)
@@ -269,9 +283,9 @@ class Program
         }
     }
 
-    static async Task TestAttioConnection()
+    static async Task PingAttio()
     {
-        Console.WriteLine("🧪 Testing Attio API connection...");
+        Console.WriteLine("🏓 Pinging Attio API...");
         
         string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
         if (string.IsNullOrEmpty(attioToken))
@@ -286,30 +300,169 @@ class Program
 
             try
             {
-                // Test by listing objects (basic connectivity test)
+                // Basic ping to list objects
                 HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/objects");
+                string responseBody = await response.Content.ReadAsStringAsync();
+                
+                Console.WriteLine($"Status: {response.StatusCode}");
+                Console.WriteLine($"Response: {responseBody}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine("✅ Attio API ping successful!");
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Attio API ping failed with status: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Attio API ping failed: {ex.Message}");
+            }
+        }
+    }
+
+    static async Task<string?> FindAttioPreseedVCsList()
+    {
+        string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
+        if (string.IsNullOrEmpty(attioToken))
+        {
+            return null;
+        }
+
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
+
+            try
+            {
+                // List all available lists to find "Preseed VCs from Notion"
+                HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/lists");
                 string responseBody = await response.Content.ReadAsStringAsync();
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine("✅ Attio API connection successful!");
-                    Console.WriteLine($"Response: {responseBody}");
-                    
-                    // Parse to show workspace info
                     JsonNode node = JsonNode.Parse(responseBody);
-                    string workspaceName = node?["data"]?["name"]?.ToString() ?? "Unknown";
-                    string workspaceId = node?["data"]?["id"]?.ToString() ?? "Unknown";
-                    Console.WriteLine($"Connected to workspace: {workspaceName} (ID: {workspaceId})");
+                    var lists = node?["data"]?.AsArray();
+                    
+                    if (lists != null && lists.Count > 0)
+                    {
+                        foreach (var list in lists)
+                        {
+                            string name = list?["name"]?.ToString() ?? "Unknown";
+                            string listId = list?["id"]?["list_id"]?.ToString() ?? "unknown";
+                            
+                            if (name.Contains("Preseed VCs from Notion", StringComparison.OrdinalIgnoreCase))
+                            {
+                                return listId;
+                            }
+                        }
+                    }
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
+    static async Task TestAttioList()
+    {
+        Console.WriteLine("📝 Testing Attio 'Preseed VCs from Notion' list lookup...");
+        
+        string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
+        if (string.IsNullOrEmpty(attioToken))
+        {
+            Console.WriteLine("❌ ATTIO_API_KEY environment variable not set");
+            return;
+        }
+
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
+
+            try
+            {
+                // First, list all available lists to find "Preseed VCs from Notion"
+                Console.WriteLine("Fetching all lists...");
+                HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/lists");
+                string responseBody = await response.Content.ReadAsStringAsync();
+                
+                Console.WriteLine($"Status: {response.StatusCode}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine("✅ Successfully fetched lists!");
+                    JsonNode node = JsonNode.Parse(responseBody);
+                    var lists = node?["data"]?.AsArray();
+                    
+                    if (lists != null && lists.Count > 0)
+                    {
+                        Console.WriteLine($"Found {lists.Count} list(s):");
+                        
+                        string? preseedVCsListId = null;
+                        
+                        foreach (var list in lists)
+                        {
+                            string name = list?["name"]?.ToString() ?? "Unknown";
+                            string apiSlug = list?["api_slug"]?.ToString() ?? "unknown";
+                            string listId = list?["id"]?["list_id"]?.ToString() ?? "unknown";
+                            
+                            Console.WriteLine($"  - {name} (slug: {apiSlug}, id: {listId})");
+                            
+                            if (name.Contains("Preseed VCs from Notion", StringComparison.OrdinalIgnoreCase))
+                            {
+                                preseedVCsListId = listId;
+                                Console.WriteLine($"    ✅ Found target 'Preseed VCs from Notion' list!");
+                            }
+                        }
+                        
+                        if (preseedVCsListId != null)
+                        {
+                            Console.WriteLine($"\n🔎 Getting details for Preseed VCs list (ID: {preseedVCsListId})...");
+                            
+                            // Get the specific list details
+                            HttpResponseMessage listResponse = await client.GetAsync($"https://api.attio.com/v2/lists/{preseedVCsListId}");
+                            string listResponseBody = await listResponse.Content.ReadAsStringAsync();
+                            
+                            if (listResponse.IsSuccessStatusCode)
+                            {
+                                Console.WriteLine("✅ Successfully retrieved Preseed VCs list details!");
+                                Console.WriteLine($"List details: {listResponseBody}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"❌ Failed to get list details: {listResponse.StatusCode}");
+                                Console.WriteLine($"Response: {listResponseBody}");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"❌ 'Preseed VCs from Notion' list not found. Available lists:");
+                            foreach (var list in lists)
+                            {
+                                string name = list?["name"]?.ToString() ?? "Unknown";
+                                Console.WriteLine($"   - {name}");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("❌ No lists found");
+                    }
                 }
                 else
                 {
-                    Console.WriteLine($"❌ Attio API error: {response.StatusCode}");
+                    Console.WriteLine($"❌ Failed to fetch lists: {response.StatusCode}");
                     Console.WriteLine($"Response: {responseBody}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Attio API connection failed: {ex.Message}");
+                Console.WriteLine($"❌ Attio list test failed: {ex.Message}");
             }
         }
     }
