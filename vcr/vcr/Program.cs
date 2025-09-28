@@ -8,6 +8,8 @@ using System.Text.Json;
 
 class Program
 {
+    // Global constants
+    private const string NOTION_INVESTOR_RESEARCH_DATABASE_ID = "27b6ef03-8cf6-8059-9860-c0ec6873c896";
     static async Task Main(string[] args)
     {
         // Argument validation
@@ -199,9 +201,20 @@ class Program
 
     static async Task UpdateNotionDatabase(string recordId, string investorDomain, string analysis)
     {
-        // TODO: Implement Notion API integration
-        await Task.Delay(100); // Simulate API call
-        Console.WriteLine($"[STUB] Would update Notion record {recordId} with analysis for {investorDomain}");
+        // Extract investor name from domain for display purposes
+        string investorName = investorDomain.Replace(".com", "").Replace(".vc", "").Replace(".", " ");
+        investorName = char.ToUpper(investorName[0]) + investorName.Substring(1);
+        
+        string? pageId = await CreateNotionInvestorEntry(investorDomain, investorName, analysis);
+        
+        if (pageId != null)
+        {
+            Console.WriteLine($"Created Notion entry for {investorName}: https://notion.so/{pageId.Replace("-", "")}");
+        }
+        else
+        {
+            Console.WriteLine($"Failed to create Notion entry for {investorDomain}");
+        }
     }
 
     static async Task UpdateAttioCRM(string recordId, string investorDomain, string analysis)
@@ -474,18 +487,15 @@ class Program
         }
     }
 
-    static async Task TestNotionInsert()
+    static async Task<string?> CreateNotionInvestorEntry(string domain, string name, string markdownContent)
     {
-        Console.WriteLine("📝 Testing Notion database entry creation with markdown content...");
-        
         string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
         if (string.IsNullOrEmpty(notionToken))
         {
-            Console.WriteLine("❌ NOTION_API_KEY environment variable not set");
-            return;
+            return null;
         }
 
-        string databaseId = "27b6ef03-8cf6-8059-9860-c0ec6873c896"; // Investor Research database ID
+        string databaseId = NOTION_INVESTOR_RESEARCH_DATABASE_ID;
 
         using (HttpClient client = new HttpClient())
         {
@@ -495,8 +505,6 @@ class Program
             try
             {
                 // Step 1: Create database entry with basic fields
-                Console.WriteLine("Creating database entry for testvc...");
-                
                 var createPageBody = new
                 {
                     parent = new { database_id = databaseId },
@@ -504,7 +512,7 @@ class Program
                     {
                         ["Domain"] = new
                         {
-                            url = "https://testvc.vc"
+                            url = domain.StartsWith("http") ? domain : $"https://{domain}"
                         },
                         ["Investor Name"] = new
                         {
@@ -513,7 +521,7 @@ class Program
                                 new
                                 {
                                     type = "text",
-                                    text = new { content = "TestVC" }
+                                    text = new { content = name }
                                 }
                             }
                         }
@@ -528,149 +536,94 @@ class Program
                 
                 if (createResponse.IsSuccessStatusCode)
                 {
-                    Console.WriteLine("✅ Database entry created successfully!");
-                    
                     // Parse response to get the page ID
                     JsonNode createNode = JsonNode.Parse(createResponseBody);
                     string pageId = createNode?["id"]?.ToString();
                     
                     if (!string.IsNullOrEmpty(pageId))
                     {
-                        Console.WriteLine($"Page ID: {pageId}");
-                        
                         // Step 2: Add markdown content to the page
-                        Console.WriteLine("Adding markdown content to page...");
+                        var contentBlocks = ConvertMarkdownToNotionBlocks(markdownContent);
                         
-                        var markdownContent = new
+                        var markdownContentBody = new
                         {
-                            children = new object[]
-                            {
-                                new
-                                {
-                                    type = "heading_1",
-                                    heading_1 = new
-                                    {
-                                        rich_text = new object[]
-                                        {
-                                            new
-                                            {
-                                                type = "text",
-                                                text = new { content = "TestVC Analysis" }
-                                            }
-                                        }
-                                    }
-                                },
-                                new
-                                {
-                                    type = "paragraph",
-                                    paragraph = new
-                                    {
-                                        rich_text = new object[]
-                                        {
-                                            new
-                                            {
-                                                type = "text",
-                                                text = new { content = "This is a test entry for TestVC (testvc.vc)." }
-                                            }
-                                        }
-                                    }
-                                },
-                                new
-                                {
-                                    type = "heading_2",
-                                    heading_2 = new
-                                    {
-                                        rich_text = new object[]
-                                        {
-                                            new
-                                            {
-                                                type = "text",
-                                                text = new { content = "Investment Criteria Match" }
-                                            }
-                                        }
-                                    }
-                                },
-                                new
-                                {
-                                    type = "bulleted_list_item",
-                                    bulleted_list_item = new
-                                    {
-                                        rich_text = new object[]
-                                        {
-                                            new
-                                            {
-                                                type = "text",
-                                                text = new { content = "Stage: Seed stage focus" }
-                                            }
-                                        }
-                                    }
-                                },
-                                new
-                                {
-                                    type = "bulleted_list_item",
-                                    bulleted_list_item = new
-                                    {
-                                        rich_text = new object[]
-                                        {
-                                            new
-                                            {
-                                                type = "text",
-                                                text = new { content = "Check size: $1M-$5M range" }
-                                            }
-                                        }
-                                    }
-                                },
-                                new
-                                {
-                                    type = "paragraph",
-                                    paragraph = new
-                                    {
-                                        rich_text = new object[]
-                                        {
-                                            new
-                                            {
-                                                type = "text",
-                                                text = new { content = "Overall: Good test case for API integration." },
-                                                annotations = new { bold = true }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            children = contentBlocks
                         };
                         
-                        string contentJson = System.Text.Json.JsonSerializer.Serialize(markdownContent);
+                        string contentJson = System.Text.Json.JsonSerializer.Serialize(markdownContentBody);
                         var contentHttpContent = new StringContent(contentJson, Encoding.UTF8, "application/json");
                         
                         HttpResponseMessage contentResponse = await client.PatchAsync($"https://api.notion.com/v1/blocks/{pageId}/children", contentHttpContent);
-                        string contentResponseBody = await contentResponse.Content.ReadAsStringAsync();
                         
                         if (contentResponse.IsSuccessStatusCode)
                         {
-                            Console.WriteLine("✅ Markdown content added to page successfully!");
-                            Console.WriteLine($"TestVC entry created with page content at: https://notion.so/{pageId.Replace("-", "")}");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"❌ Failed to add content to page: {contentResponse.StatusCode}");
-                            Console.WriteLine($"Response: {contentResponseBody}");
+                            return pageId; // Success - return the page ID
                         }
                     }
-                    else
-                    {
-                        Console.WriteLine("❌ Could not extract page ID from response");
-                    }
                 }
-                else
-                {
-                    Console.WriteLine($"❌ Failed to create database entry: {createResponse.StatusCode}");
-                    Console.WriteLine($"Response: {createResponseBody}");
-                }
+                return null; // Failed
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"❌ Notion insert test failed: {ex.Message}");
+                return null; // Failed
             }
+        }
+    }
+
+    static object[] ConvertMarkdownToNotionBlocks(string markdownContent)
+    {
+        // Simple markdown to Notion blocks converter
+        // For now, just wrap the entire content in a paragraph
+        // This can be enhanced to parse actual markdown later
+        return new object[]
+        {
+            new
+            {
+                type = "paragraph",
+                paragraph = new
+                {
+                    rich_text = new object[]
+                    {
+                        new
+                        {
+                            type = "text",
+                            text = new { content = markdownContent }
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    static async Task TestNotionInsert()
+    {
+        Console.WriteLine("📝 Testing Notion database entry creation with markdown content...");
+        
+        string testDomain = "testvc.vc";
+        string testName = "TestVC";
+        string testMarkdown = @"# TestVC Analysis
+
+This is a test entry for TestVC (testvc.vc).
+
+## Investment Criteria Match
+
+- Stage: Seed stage focus
+- Check size: $1M-$5M range
+
+**Overall: Good test case for API integration.**";
+        
+        Console.WriteLine($"Creating entry for {testName} ({testDomain})...");
+        string? pageId = await CreateNotionInvestorEntry(testDomain, testName, testMarkdown);
+        
+        if (pageId != null)
+        {
+            Console.WriteLine("✅ TestVC entry created successfully!");
+            Console.WriteLine($"Page ID: {pageId}");
+            Console.WriteLine($"View at: https://notion.so/{pageId.Replace("-", "")}");
+        }
+        else
+        {
+            Console.WriteLine("❌ Failed to create TestVC entry");
         }
     }
 }
