@@ -1,0 +1,116 @@
+{
+  "id": "6223183e-8132-4a5e-bfb4-79071fce6e80",
+  "model": "sonar-pro",
+  "created": 1759052498,
+  "usage": {
+    "prompt_tokens": 13,
+    "completion_tokens": 474,
+    "total_tokens": 487,
+    "search_context_size": "low",
+    "cost": {
+      "input_tokens_cost": 0.0,
+      "output_tokens_cost": 0.007,
+      "request_cost": 0.006,
+      "total_cost": 0.013
+    }
+  },
+  "citations": [
+    "https://www.cbssports.com/tennis/news/2025-french-open-results-schedule-as-jannik-sinner-faces-carlos-alcaraz-coco-gauff-earns-first-title/",
+    "https://en.wikipedia.org/wiki/2025_French_Open_%E2%80%93_Men's_singles_final",
+    "https://en.wikipedia.org/wiki/2025_French_Open_%E2%80%93_Men's_singles",
+    "https://www.tennis.com/news/articles/who-were-the-winners-and-losers-at-2025-roland-garros",
+    "https://www.espn.com/tennis/scoreboard/tournament/_/eventId/172-2025",
+    "https://www.usatoday.com/story/sports/tennis/french/2025/06/08/french-open-mens-final-results-highlights/84018894007/",
+    "https://www.youtube.com/watch?v=aERKJuBtIGw",
+    "https://www.cbssports.com/tennis/news/2025-french-open-results-jannik-sinner-dominates-novak-djokovic-sets-up-showdown-vs-carlos-alcaraz-in-final/",
+    "https://www.rolandgarros.com",
+    "https://www.topendsports.com/events/tennis-grand-slam/french-open/winners-men.htm"
+  ],
+  "search_results": [
+    {
+      "title": "2025 French Open: Results, schedule as Jannik Sinner faces Carlos ...",
+      "url": "https://www.cbssports.com/tennis/news/2025-french-open-results-schedule-as-jannik-sinner-faces-carlos-alcaraz-coco-gauff-earns-first-title/",
+      "date": "2025-06-07",
+      "last_updated": "2025-09-28",
+      "snippet": "The women's final is on June 7, and the men's final is one day later on June 8. Men's final. (1) Jannik Sinner vs. (2) Carlos Alcaraz -- Sunday, ..."
+    },
+    {
+      "title": "2025 French Open \u2013 Men's singles final - Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/2025_French_Open_%E2%80%93_Men's_singles_final",
+      "date": "2025-06-08",
+      "last_updated": "2025-09-11",
+      "snippet": "After 5 hours and 29 minutes of play, Alcaraz defeated Sinner 4\u20136, 6\u20137 (4\u20137) , 6\u20134, 7\u20136 (7\u20133) , 7\u20136 (10\u20132) , in the longest French Open final in history."
+    },
+    {
+      "title": "2025 French Open \u2013 Men's singles - Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/2025_French_Open_%E2%80%93_Men's_singles",
+      "date": "2025-04-27",
+      "last_updated": "2025-09-27",
+      "snippet": "Defending champion Carlos Alcaraz defeated Jannik Sinner in the final, 4\u20136, 6\u20137, 6\u20134, 7\u20136, 7\u20136 to win the men's singles tennis title at the 2025 French Open. ..."
+    },
+    {
+      "title": "Who were the winners and losers at 2025 Roland Garros?",
+      "url": "https://www.tennis.com/news/articles/who-were-the-winners-and-losers-at-2025-roland-garros",
+      "date": "2025-06-09",
+      "last_updated": "2025-08-29",
+      "snippet": "Babora Krej\u010d\u00edkov\u00e1 has won the title at Roland Garros, Karolina Muchova is a former runner-up, Petra Kvitova is a two-time semifinalist in Paris."
+    },
+    {
+      "title": "2025 Roland Garros Tennis Live Scores - ESPN",
+      "url": "https://www.espn.com/tennis/scoreboard/tournament/_/eventId/172-2025",
+      "date": "2025-06-08",
+      "last_updated": "2025-09-19",
+      "snippet": "Live scores for the 2025 Roland Garros tennis tournament on ESPN. Includes daily schedules, live scores and match results."
+    },
+    {
+      "title": "French Open men's final results: Carlos Alcaraz beats Jannik Sinner",
+      "url": "https://www.usatoday.com/story/sports/tennis/french/2025/06/08/french-open-mens-final-results-highlights/84018894007/",
+      "date": "2025-06-08",
+      "last_updated": "2025-06-08",
+      "snippet": "An exhausted Carlos Alcaraz of Spain collapses after winning the 2025 French Open title, beating. Alcaraz wins fifth-set tiebreaker to repeat as ..."
+    },
+    {
+      "title": "Highlights Sinner vs Alcaraz Final | Roland-Garros 2025 - YouTube",
+      "url": "https://www.youtube.com/watch?v=aERKJuBtIGw",
+      "date": "2025-06-08",
+      "last_updated": "2025-07-29",
+      "snippet": "Watch the highlights of the 2025 Men's singles final between Jannik Sinner and Carlos Alcaraz. Sponsored by Emirates."
+    },
+    {
+      "title": "2025 French Open results: Jannik Sinner dominates Novak Djokovic ...",
+      "url": "https://www.cbssports.com/tennis/news/2025-french-open-results-jannik-sinner-dominates-novak-djokovic-sets-up-showdown-vs-carlos-alcaraz-in-final/",
+      "date": "2025-06-06",
+      "last_updated": "2025-09-24",
+      "snippet": "Sinner would win the tiebreak 7-3 to finish off a straight set victory. For Djokovic, it's his first straight sets loss in a grand slam match ..."
+    },
+    {
+      "title": "Roland-Garros 2025 - The official site",
+      "url": "https://www.rolandgarros.com",
+      "date": "2025-06-08",
+      "last_updated": "2025-09-28",
+      "snippet": "The exclusive home of Roland-Garros tennis delivering live scores, schedules, draws, players, news, photos, videos and the most complete coverage of The ..."
+    },
+    {
+      "title": "French Open Men's Results and Complete Winners List",
+      "url": "https://www.topendsports.com/events/tennis-grand-slam/french-open/winners-men.htm",
+      "date": "2025-01-01",
+      "last_updated": "2025-09-26",
+      "snippet": "Carlos Alcaraz won the 2025 edition, defeating Jannik Sinner in the final. The recent tournaments have been dominated by Spanish player Rafael Nadal, who has 14 ..."
+    }
+  ],
+  "object": "chat.completion",
+  "choices": [
+    {
+      "index": 0,
+      "finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "**Carlos Alcaraz** won the 2025 French Open Men's singles final, defeating **Jannik Sinner** in a five-set thriller: 4\u20136, 6\u20137(4\u20137), 6\u20134, 7\u20136(7\u20133), 7\u20136(10\u20132)[2][3]. In the Women's singles final, **Coco Gauff** captured her first French Open title with a comeback victory over **Aryna Sabalenka**, 6\u20137, 6\u20132, 6\u20134[1].\n\nKey details:\n- The men's final set records as the **longest French Open final in history (5 hours, 29 minutes)** and the first decided by a final-set tiebreak[2][3].\n- Alcaraz came back from two sets down, **saving three consecutive championship points**, and secured his **second French Open and fifth major title**[2][3].\n- Gauff earned her **second Grand Slam**, previously winning the 2023 US Open, both times defeating Sabalenka[1].\n- The women's final was held on June 7; the men's one day later, June 8[1].\n- Both finals featured the top two seeds.\n\n**Men's Final Result:**  \n| Winner              | Runner-up        | Score                                                          |\n|---------------------|------------------|---------------------------------------------------------------|\n| Carlos Alcaraz      | Jannik Sinner    | 4\u20136, 6\u20137(4\u20137), 6\u20134, 7\u20136(7\u20133), 7\u20136(10\u20132)                       |\n\n**Women's Final Result:**  \n| Winner        | Runner-up         | Score            |\n|---------------|-------------------|------------------|\n| Coco Gauff    | Aryna Sabalenka   | 6\u20137, 6\u20132, 6\u20134    |\n\nAlcaraz\u2019s victory marks his first five major finals won, tying him for the second-youngest to reach five major titles in the Open Era, matching Rafael Nadal's age and trailing only Bj\u00f6rn Borg[3]. Gauff\u2019s win at Roland Garros confirms her establishment among the top women\u2019s players after overcoming an early deficit in the final[1]."
+      },
+      "delta": {
+        "role": "assistant",
+        "content": ""
+      }
+    }
+  ]
+}

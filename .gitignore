@@ -1,0 +1,3 @@
+vcr/vcr/bin/*
+vcr/vcr/obj/*
+vcr/.DS_Store/*
