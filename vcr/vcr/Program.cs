@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,8 +19,31 @@ class Program
         }
 
         string investorDomain = args[0];
-        string apiUrl = "https://api.perplexity.ai/chat/completions"; // Replace with the actual API endpoint
-        string apiKey = Environment.GetEnvironmentVariable("SONAR_API_KEY"); // Replace with your API key
+        string apiUrl = "https://api.perplexity.ai/chat/completions";
+        string apiKey = Environment.GetEnvironmentVariable("SONAR_API_KEY");
+
+        // Read the investor criteria file
+        string criteriaFilePath = "Neo_Investor_Search_Criteria.md";
+        string investorCriteria = "";
+        
+        try
+        {
+            if (File.Exists(criteriaFilePath))
+            {
+                investorCriteria = await File.ReadAllTextAsync(criteriaFilePath);
+                Console.WriteLine($"Loaded investor criteria from {criteriaFilePath}");
+            }
+            else
+            {
+                Console.WriteLine($"Warning: {criteriaFilePath} not found. Proceeding without specific criteria.");
+                investorCriteria = "general venture capital investment criteria";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error reading criteria file: {ex.Message}");
+            investorCriteria = "general venture capital investment criteria";
+        }
 
         using (HttpClient client = new HttpClient())
         {
@@ -33,7 +57,15 @@ class Program
                     new
                     {
                         role = "user",
-                        content = $"Research {investorDomain} and evaluate whether it would be a good fit given the investor criteria."
+                        content = $"Research the venture capital firm at {investorDomain} and evaluate whether it would be a good fit for Neo's $5M seed round based on the specific investor criteria provided below.\n\n" +
+                                 $"INVESTOR CRITERIA CONTEXT:\n{investorCriteria}\n\n" +
+                                 $"Please analyze {investorDomain} against these criteria and provide:\n" +
+                                 $"1. How well they match our stage, check size, and sector focus\n" +
+                                 $"2. Their relevant portfolio companies and track record\n" +
+                                 $"3. Geographic alignment and investment thesis fit\n" +
+                                 $"4. Overall recommendation (Strong Fit / Good Fit / Weak Fit / No Fit)\n" +
+                                 $"5. Any specific partners or team members to target\n" +
+                                 $"6. Potential concerns or red flags"
                     }
                 }
             };

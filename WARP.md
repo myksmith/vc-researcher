@@ -21,16 +21,20 @@ vcr/                          # Main solution directory
 ### Key Components
 - **Program.cs**: Single-file console application that:
   - Configures HttpClient with Perplexity API authentication
+  - Reads investor criteria from `Neo_Investor_Search_Criteria.md`
   - Sends POST requests to `https://api.perplexity.ai/chat/completions`
   - Uses the `sonar-pro` model for queries
+  - Generates detailed queries with investor criteria context
   - Parses JSON responses and extracts chat content
   - Handles errors and displays both full response and extracted content
+- **Neo_Investor_Search_Criteria.md**: Contains detailed investor search criteria for Neo's $5M seed round
 
 ### Dependencies
 - **.NET 9.0**: Target framework (note: requires .NET 9.0 SDK)
 - **System.Net.Http**: For HTTP client functionality
 - **System.Text.Json**: For JSON serialization/deserialization
 - **System.Text.Json.Nodes**: For JSON parsing and navigation
+- **System.IO**: For file operations to read investor criteria
 
 ## Environment Setup
 
@@ -87,13 +91,19 @@ The application now accepts a single command-line argument for the investor doma
 dotnet run <investor-domain>
 ```
 
-The query is automatically formatted as: "Research [investordomain] and evaluate whether it would be a good fit given the investor criteria."
+The application reads investor criteria from `Neo_Investor_Search_Criteria.md` and generates a comprehensive query that includes:
+- The investor domain to research
+- Full investor criteria context from the markdown file
+- Specific analysis points including stage/check size match, portfolio alignment, geographic fit, and overall recommendation
 
 ### Modifying the Query Template
-To change the query template, modify line 36 in `Program.cs`:
+To change the query template, modify lines 60-68 in `Program.cs`:
 ```csharp
-content = $"Your new query template with {investorDomain}"
+content = $"Your new query template with {investorDomain} and {investorCriteria}"
 ```
+
+### Modifying Investor Criteria
+To update the investor criteria, edit the `Neo_Investor_Search_Criteria.md` file directly. The application will automatically read and include the updated criteria in all queries.
 
 ### Changing the AI Model
 To use a different Perplexity model, modify line 21 in `Program.cs`:
