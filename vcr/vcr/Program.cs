@@ -9,8 +9,17 @@ class Program
 {
     static async Task Main(string[] args)
     {
+        // Check if investor domain argument is provided
+        if (args.Length == 0)
+        {
+            Console.WriteLine("Usage: dotnet run <investor-domain>");
+            Console.WriteLine("Example: dotnet run example-vc.com");
+            return;
+        }
+
+        string investorDomain = args[0];
         string apiUrl = "https://api.perplexity.ai/chat/completions"; // Replace with the actual API endpoint
-        string apiKey = ""; // Replace with your API key
+        string apiKey = Environment.GetEnvironmentVariable("SONAR_API_KEY"); // Replace with your API key
 
         using (HttpClient client = new HttpClient())
         {
@@ -24,7 +33,7 @@ class Program
                     new
                     {
                         role = "user",
-                        content = "What were the results of the 2025 French Open Finals?"
+                        content = $"Research {investorDomain} and evaluate whether it would be a good fit given the investor criteria."
                     }
                 }
             };
