@@ -12,6 +12,45 @@ class Program
     private const string NOTION_INVESTOR_RESEARCH_DATABASE_ID = "27b6ef03-8cf6-8059-9860-c0ec6873c896";
     static async Task Main(string[] args)
     {
+        // Environment variable validation - check all required API keys
+        var requiredEnvVars = new Dictionary<string, string>
+        {
+            { "SONAR_API_KEY", "Perplexity API" },
+            { "NOTION_API_KEY", "Notion API" },
+            { "ATTIO_API_KEY", "Attio CRM API" },
+            { "MARK2NOTION_API_KEY", "Mark2Notion API" }
+        };
+
+        var missingVars = new List<string>();
+        
+        foreach (var envVar in requiredEnvVars)
+        {
+            string value = Environment.GetEnvironmentVariable(envVar.Key);
+            if (string.IsNullOrEmpty(value))
+            {
+                missingVars.Add($"{envVar.Key} ({envVar.Value})");
+            }
+        }
+
+        if (missingVars.Count > 0)
+        {
+            Console.WriteLine("❌ Missing required environment variables:");
+            foreach (var missing in missingVars)
+            {
+                Console.WriteLine($"  - {missing}");
+            }
+            Console.WriteLine("\nPlease set all required API keys before running the application.");
+            Console.WriteLine("Example:");
+            Console.WriteLine("  export SONAR_API_KEY=\"your_perplexity_key\"");
+            Console.WriteLine("  export NOTION_API_KEY=\"your_notion_key\"");
+            Console.WriteLine("  export ATTIO_API_KEY=\"your_attio_key\"");
+            Console.WriteLine("  export MARK2NOTION_API_KEY=\"your_mark2notion_key\"");
+            Environment.Exit(1);
+            return;
+        }
+
+        Console.WriteLine("✅ All required API keys are configured");
+
         // Argument validation
         if (args.Length == 0)
         {
