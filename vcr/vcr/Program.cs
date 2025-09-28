@@ -209,8 +209,15 @@ class Program
 
             try
             {
-                // Test by listing databases (requires integration to be shared with at least one database)
-                HttpResponseMessage response = await client.GetAsync("https://api.notion.com/v1/databases");
+                // Test by searching for the 'Investor Research' database specifically
+                var searchBody = new 
+                {
+                    query = "Investor Research",
+                    filter = new { property = "object", value = "database" }
+                };
+                string searchJson = System.Text.Json.JsonSerializer.Serialize(searchBody);
+                var searchContent = new StringContent(searchJson, Encoding.UTF8, "application/json");
+                HttpResponseMessage response = await client.PostAsync("https://api.notion.com/v1/search", searchContent);
                 string responseBody = await response.Content.ReadAsStringAsync();
                 
                 if (response.IsSuccessStatusCode)
@@ -223,17 +230,30 @@ class Program
                     var results = node?["results"]?.AsArray();
                     if (results != null && results.Count > 0)
                     {
-                        Console.WriteLine($"Found {results.Count} accessible database(s):");
+                        Console.WriteLine($"Found {results.Count} matching database(s):");
+                        bool foundInvestorResearch = false;
                         foreach (var db in results)
                         {
                             string id = db?["id"]?.ToString() ?? "unknown";
                             string title = db?["title"]?.AsArray()?[0]?["plain_text"]?.ToString() ?? "Untitled";
                             Console.WriteLine($"  - {title} (ID: {id})");
+                            if (title.Contains("Investor Research", StringComparison.OrdinalIgnoreCase))
+                            {
+                                foundInvestorResearch = true;
+                                Console.WriteLine($"    ✅ Found target 'Investor Research' database!");
+                            }
+                        }
+                        if (!foundInvestorResearch)
+                        {
+                            Console.WriteLine($"    ⚠️  'Investor Research' database not found in results");
                         }
                     }
                     else
                     {
-                        Console.WriteLine("No databases found. Make sure to share at least one database with your Notion integration.");
+                        Console.WriteLine("❌ No 'Investor Research' database found. Make sure:");
+                        Console.WriteLine("   1. The database exists in the sagittal Notion workspace");
+                        Console.WriteLine("   2. Your Notion integration has access to it");
+                        Console.WriteLine("   3. The database is named 'Investor Research'");
                     }
                 }
                 else
@@ -266,8 +286,8 @@ class Program
 
             try
             {
-                // Test by getting workspace info
-                HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/workspace");
+                // Test by listing objects (basic connectivity test)
+                HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/objects");
                 string responseBody = await response.Content.ReadAsStringAsync();
                 
                 if (response.IsSuccessStatusCode)
