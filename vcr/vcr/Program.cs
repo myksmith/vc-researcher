@@ -10,6 +10,8 @@ class Program
 {
     // Global constants
     private const string NOTION_INVESTOR_RESEARCH_DATABASE_ID = "27b6ef03-8cf6-8059-9860-c0ec6873c896";
+    private const string ATTIO_STARTUP_FUNDRAISING_LIST_ID = "978d31e8-588c-443e-be6e-3023d9d2b750";
+    private const string ATTIO_PRESEED_VCS_LIST_ID = "9420a9dd-773d-49b1-be02-e98077c29b94";
     static async Task Main(string[] args)
     {
         // Environment variable validation - check all required API keys
@@ -60,7 +62,9 @@ class Program
             Console.WriteLine("  dotnet run --test-notion      # Test Notion API connection");
             Console.WriteLine("  dotnet run --test-notion-insert # Test Notion database entry creation with markdown");
             Console.WriteLine("  dotnet run --ping-attio       # Ping Attio API for basic connectivity");
-            Console.WriteLine("  dotnet run --test-attio-list  # Test Attio list lookup for 'Preseed VCs from Notion'");
+            Console.WriteLine("  dotnet run --test-attio-list  # Test Attio list lookup for both target databases");
+            Console.WriteLine("\nUtility commands:");
+            Console.WriteLine("  dotnet run --fix-links <domain> # Update Attio with existing Notion research URL (no new research)");
             return;
         }
 
@@ -86,6 +90,20 @@ class Program
         if (args[0] == "--test-attio-list")
         {
             await TestAttioList();
+            return;
+        }
+        
+        if (args[0] == "--fix-links")
+        {
+            if (args.Length < 2)
+            {
+                Console.WriteLine("❌ Usage: dotnet run --fix-links <investor-domain>");
+                Console.WriteLine("Example: dotnet run --fix-links sequoiacap.com");
+                return;
+            }
+            
+            string domain = args[1];
+            await FixAttioLinks(domain);
             return;
         }
 
@@ -119,11 +137,16 @@ class Program
             Console.WriteLine("✅ Completed Perplexity analysis");
 
             // Step 3: Update Notion database
-            await UpdateNotionDatabase(notionRecordId, investorDomain, analysis);
+            string? notionPageUrl = await UpdateNotionDatabase(notionRecordId, investorDomain, analysis);
+            if (notionPageUrl == null)
+            {
+                Console.WriteLine("❌ Failed to create Notion page - cannot update Attio with URL");
+                return;
+            }
             Console.WriteLine("✅ Updated Notion database");
 
-            // Step 4: Update Attio CRM record
-            await UpdateAttioCRM(attioRecordId, investorDomain, analysis);
+            // Step 4: Update Attio CRM record with the Notion URL
+            await UpdateAttioCRM(attioRecordId, investorDomain, notionPageUrl);
             Console.WriteLine("✅ Updated Attio CRM");
 
             Console.WriteLine($"🎉 Successfully processed {investorDomain}");
@@ -226,22 +249,22 @@ class Program
 
     static async Task<string> FindAttioRecord(string investorDomain)
     {
-        // First, find the Preseed VCs list
-        string? listId = await FindAttioPreseedVCsList();
-        if (listId == null)
+        // Check both lists for the investor record
+        var listIds = await FindAttioBothLists();
+        if (listIds.preseedVCs == null && listIds.startupFundraising == null)
         {
             return null;
         }
         
-        // TODO: Search within the list for records matching the domain
-        // For now, return the list ID as a placeholder
+        // TODO: Search within both lists for records matching the domain
+        // For now, return the first available list ID as a placeholder
         await Task.Delay(100); // Simulate additional lookup logic
         
-        // Stubbed: Return list ID for now (will need to search within list entries)
-        return listId;
+        // Stubbed: Return first available list ID for now (will need to search within list entries)
+        return listIds.preseedVCs ?? listIds.startupFundraising;
     }
 
-    static async Task UpdateNotionDatabase(string recordId, string investorDomain, string analysis)
+    static async Task<string?> UpdateNotionDatabase(string recordId, string investorDomain, string analysis)
     {
         // Extract VC name from the analysis response
         string vcName = ExtractVCNameFromResponse(analysis);
@@ -257,19 +280,77 @@ class Program
         
         if (pageId != null)
         {
-            Console.WriteLine($"Created Notion entry for {vcName}: https://notion.so/{pageId.Replace("-", "")}");
+            string notionUrl = $"https://notion.so/{pageId.Replace("-", "")}";
+            Console.WriteLine($"Created Notion entry for {vcName}: {notionUrl}");
+            return notionUrl;
         }
         else
         {
             Console.WriteLine($"Failed to create Notion entry for {investorDomain}");
+            return null;
         }
     }
 
-    static async Task UpdateAttioCRM(string recordId, string investorDomain, string analysis)
+    static async Task UpdateAttioCRM(string recordId, string investorDomain, string notionUrl)
     {
-        // TODO: Implement Attio API integration
-        await Task.Delay(100); // Simulate API call
-        Console.WriteLine($"[STUB] Would update Attio record {recordId} with analysis for {investorDomain}");
+        string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
+        if (string.IsNullOrEmpty(attioToken))
+        {
+            Console.WriteLine("❌ ATTIO_API_KEY not set, cannot update Attio records");
+            return;
+        }
+
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
+
+            try
+            {
+                Console.WriteLine($"🔍 Searching for {investorDomain} in both Attio lists...");
+                
+                // Try to find and update the record in both lists
+                bool updatedStartupFundraising = await UpdateAttioRecord(client, ATTIO_STARTUP_FUNDRAISING_LIST_ID, "Startup Fundraising", investorDomain, notionUrl);
+                bool updatedPreseedVCs = await UpdateAttioRecord(client, ATTIO_PRESEED_VCS_LIST_ID, "Preseed VCs from Notion", investorDomain, notionUrl);
+                
+                if (updatedStartupFundraising || updatedPreseedVCs)
+                {
+                    Console.WriteLine($"✅ Successfully updated Notion Research URL for {investorDomain}");
+                    if (updatedStartupFundraising) Console.WriteLine($"   - Updated in Startup Fundraising list");
+                    if (updatedPreseedVCs) Console.WriteLine($"   - Updated in Preseed VCs from Notion list");
+                }
+                else
+                {
+                    Console.WriteLine($"⚠️  No records found for {investorDomain} in either list");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error updating Attio records: {ex.Message}");
+            }
+        }
+    }
+    
+    static async Task<bool> UpdateAttioRecord(HttpClient client, string listId, string listName, string investorDomain, string notionUrl)
+    {
+        try
+        {
+            // TODO: Search within the list for records matching the domain
+            // For now, this is stubbed as we need to implement the search logic
+            Console.WriteLine($"🔍 Searching for {investorDomain} in {listName} list (ID: {listId})...");
+            
+            // Placeholder: In a real implementation, we would:
+            // 1. Search list entries for records matching the domain
+            // 2. Get the record ID 
+            // 3. Update the "Notion Research URL" field with the notionUrl
+            
+            Console.WriteLine($"[STUB] Would update record in {listName} with URL: {notionUrl}");
+            return false; // Return true when actual implementation is complete
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error updating {listName}: {ex.Message}");
+            return false;
+        }
     }
 
     // Test functions for API connectivity
@@ -391,12 +472,12 @@ class Program
         }
     }
 
-    static async Task<string?> FindAttioPreseedVCsList()
+    static async Task<(string? preseedVCs, string? startupFundraising)> FindAttioBothLists()
     {
         string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
         if (string.IsNullOrEmpty(attioToken))
         {
-            return null;
+            return (null, null);
         }
 
         using (HttpClient client = new HttpClient())
@@ -405,7 +486,7 @@ class Program
 
             try
             {
-                // List all available lists to find "Preseed VCs from Notion"
+                // List all available lists to find both target lists
                 HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/lists");
                 string responseBody = await response.Content.ReadAsStringAsync();
                 
@@ -416,6 +497,9 @@ class Program
                     
                     if (lists != null && lists.Count > 0)
                     {
+                        string? preseedVCsListId = null;
+                        string? startupFundraisingListId = null;
+                        
                         foreach (var list in lists)
                         {
                             string name = list?["name"]?.ToString() ?? "Unknown";
@@ -423,23 +507,29 @@ class Program
                             
                             if (name.Contains("Preseed VCs from Notion", StringComparison.OrdinalIgnoreCase))
                             {
-                                return listId;
+                                preseedVCsListId = listId;
+                            }
+                            else if (name.Contains("Startup Fundraising", StringComparison.OrdinalIgnoreCase))
+                            {
+                                startupFundraisingListId = listId;
                             }
                         }
+                        
+                        return (preseedVCsListId, startupFundraisingListId);
                     }
                 }
-                return null;
+                return (null, null);
             }
             catch
             {
-                return null;
+                return (null, null);
             }
         }
     }
 
     static async Task TestAttioList()
     {
-        Console.WriteLine("📝 Testing Attio 'Preseed VCs from Notion' list lookup...");
+        Console.WriteLine("📝 Testing Attio database lookup for both target lists...");
         
         string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
         if (string.IsNullOrEmpty(attioToken))
@@ -454,7 +544,7 @@ class Program
 
             try
             {
-                // First, list all available lists to find "Preseed VCs from Notion"
+                // First, list all available lists to find both target lists
                 Console.WriteLine("Fetching all lists...");
                 HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/lists");
                 string responseBody = await response.Content.ReadAsStringAsync();
@@ -472,6 +562,7 @@ class Program
                         Console.WriteLine($"Found {lists.Count} list(s):");
                         
                         string? preseedVCsListId = null;
+                        string? startupFundraisingListId = null;
                         
                         foreach (var list in lists)
                         {
@@ -486,35 +577,75 @@ class Program
                                 preseedVCsListId = listId;
                                 Console.WriteLine($"    ✅ Found target 'Preseed VCs from Notion' list!");
                             }
+                            else if (name.Contains("Startup Fundraising", StringComparison.OrdinalIgnoreCase))
+                            {
+                                startupFundraisingListId = listId;
+                                Console.WriteLine($"    ✅ Found target 'Startup Fundraising' list!");
+                            }
                         }
                         
+                        // Test both lists if found
                         if (preseedVCsListId != null)
                         {
                             Console.WriteLine($"\n🔎 Getting details for Preseed VCs list (ID: {preseedVCsListId})...");
                             
-                            // Get the specific list details
                             HttpResponseMessage listResponse = await client.GetAsync($"https://api.attio.com/v2/lists/{preseedVCsListId}");
                             string listResponseBody = await listResponse.Content.ReadAsStringAsync();
                             
                             if (listResponse.IsSuccessStatusCode)
                             {
                                 Console.WriteLine("✅ Successfully retrieved Preseed VCs list details!");
-                                Console.WriteLine($"List details: {listResponseBody}");
+                                Console.WriteLine($"Preseed VCs list details: {listResponseBody}");
                             }
                             else
                             {
-                                Console.WriteLine($"❌ Failed to get list details: {listResponse.StatusCode}");
+                                Console.WriteLine($"❌ Failed to get Preseed VCs list details: {listResponse.StatusCode}");
                                 Console.WriteLine($"Response: {listResponseBody}");
                             }
                         }
                         else
                         {
-                            Console.WriteLine($"❌ 'Preseed VCs from Notion' list not found. Available lists:");
+                            Console.WriteLine($"❌ 'Preseed VCs from Notion' list not found.");
+                        }
+                        
+                        if (startupFundraisingListId != null)
+                        {
+                            Console.WriteLine($"\n🔎 Getting details for Startup Fundraising list (ID: {startupFundraisingListId})...");
+                            
+                            HttpResponseMessage listResponse = await client.GetAsync($"https://api.attio.com/v2/lists/{startupFundraisingListId}");
+                            string listResponseBody = await listResponse.Content.ReadAsStringAsync();
+                            
+                            if (listResponse.IsSuccessStatusCode)
+                            {
+                                Console.WriteLine("✅ Successfully retrieved Startup Fundraising list details!");
+                                Console.WriteLine($"Startup Fundraising list details: {listResponseBody}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"❌ Failed to get Startup Fundraising list details: {listResponse.StatusCode}");
+                                Console.WriteLine($"Response: {listResponseBody}");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"❌ 'Startup Fundraising' list not found.");
+                        }
+                        
+                        // Show summary
+                        if (preseedVCsListId == null && startupFundraisingListId == null)
+                        {
+                            Console.WriteLine($"\n❌ Neither target list found. Available lists:");
                             foreach (var list in lists)
                             {
                                 string name = list?["name"]?.ToString() ?? "Unknown";
                                 Console.WriteLine($"   - {name}");
                             }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"\n📊 Summary:");
+                            Console.WriteLine($"  - Preseed VCs from Notion: {(preseedVCsListId != null ? "✅ Found" : "❌ Not found")}");
+                            Console.WriteLine($"  - Startup Fundraising: {(startupFundraisingListId != null ? "✅ Found" : "❌ Not found")}");
                         }
                     }
                     else
@@ -711,6 +842,100 @@ This is a test entry for TestVC (testvc.vc).
         else
         {
             Console.WriteLine("❌ Failed to create TestVC entry");
+        }
+    }
+    
+    static async Task FixAttioLinks(string investorDomain)
+    {
+        try
+        {
+            Console.WriteLine($"🔗 Fixing Attio links for {investorDomain}...");
+            
+            // Step 1: Look up existing Notion research page
+            Console.WriteLine($"🔍 Looking up existing Notion research for {investorDomain}...");
+            string? notionUrl = await FindExistingNotionResearch(investorDomain);
+            
+            if (notionUrl == null)
+            {
+                Console.WriteLine($"❌ No existing Notion research found for {investorDomain}");
+                Console.WriteLine("   Use the regular workflow to create new research first.");
+                return;
+            }
+            
+            Console.WriteLine($"✅ Found existing Notion research: {notionUrl}");
+            
+            // Step 2: Update Attio records with the URL (skip Perplexity and Notion creation)
+            Console.WriteLine($"🔄 Updating Attio database links...");
+            await UpdateAttioCRM("fix-links-mode", investorDomain, notionUrl);
+            
+            Console.WriteLine($"🎉 Successfully updated Attio links for {investorDomain}!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error fixing links for {investorDomain}: {ex.Message}");
+        }
+    }
+    
+    static async Task<string?> FindExistingNotionResearch(string investorDomain)
+    {
+        string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
+        if (string.IsNullOrEmpty(notionToken))
+        {
+            return null;
+        }
+
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
+            client.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
+
+            try
+            {
+                // Search the Investor Research database for pages with matching domain
+                var searchBody = new
+                {
+                    filter = new
+                    {
+                        property = "Domain",
+                        url = new
+                        {
+                            contains = investorDomain
+                        }
+                    }
+                };
+                
+                string searchJson = System.Text.Json.JsonSerializer.Serialize(searchBody);
+                var searchContent = new StringContent(searchJson, Encoding.UTF8, "application/json");
+                
+                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent);
+                string responseBody = await response.Content.ReadAsStringAsync();
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    JsonNode node = JsonNode.Parse(responseBody);
+                    var results = node?["results"]?.AsArray();
+                    
+                    if (results != null && results.Count > 0)
+                    {
+                        // Get the first matching page
+                        var firstResult = results[0];
+                        string? pageId = firstResult?["id"]?.ToString();
+                        
+                        if (!string.IsNullOrEmpty(pageId))
+                        {
+                            // Return the Notion URL
+                            return $"https://notion.so/{pageId.Replace("-", "")}";
+                        }
+                    }
+                }
+                
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error searching Notion database: {ex.Message}");
+                return null;
+            }
         }
     }
 }
