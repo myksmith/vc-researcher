@@ -551,44 +551,67 @@ class Program
                     
                     if (!string.IsNullOrEmpty(pageId))
                     {
-                        // Step 2: Add markdown content to the page
-                        var markdownContentBody = new
+                        // Step 2: Add markdown content to the page using Mark2Notion API
+                        // Create a new HttpClient for Mark2Notion API
+                        using (HttpClient mark2NotionClient = new HttpClient())
                         {
-                            children = new object[]
+                            // Get Mark2Notion API key from environment variable
+                            string mark2NotionApiKey = Environment.GetEnvironmentVariable("MARK2NOTION_API_KEY");
+                            if (string.IsNullOrEmpty(mark2NotionApiKey))
                             {
-                                new
+                                Console.WriteLine("MARK2NOTION_API_KEY environment variable not set");
+                                return null;
+                            }
+
+                            // Set up the Mark2Notion API request
+                            mark2NotionClient.DefaultRequestHeaders.Add("x-api-key", mark2NotionApiKey);
+
+                            var mark2NotionRequestBody = new
+                            {
+                                markdown = markdownContent,
+                                notionToken = notionToken,
+                                pageId = pageId
+                                // Optional: after parameter can be used to append after specific block
+                                // after = "block-id-to-append-after"
+                            };
+
+                            string mark2NotionJson = System.Text.Json.JsonSerializer.Serialize(mark2NotionRequestBody);
+                            var mark2NotionContent = new StringContent(mark2NotionJson, Encoding.UTF8, "application/json");
+
+                            // Call the Mark2Notion append API
+                            HttpResponseMessage mark2NotionResponse = await mark2NotionClient.PostAsync("https://api.mark2notion.com/api/append", mark2NotionContent);
+                            string mark2NotionResponseBody = await mark2NotionResponse.Content.ReadAsStringAsync();
+
+                            if (mark2NotionResponse.IsSuccessStatusCode)
+                            {
+                                // Parse the Mark2Notion response
+                                JsonNode mark2NotionNode = JsonNode.Parse(mark2NotionResponseBody);
+                                string status = mark2NotionNode?["status"]?.ToString() ?? "unknown";
+                                
+                                if (status == "success")
                                 {
-                                    type = "paragraph",
-                                    paragraph = new
-                                    {
-                                        rich_text = new object[]
-                                        {
-                                            new
-                                            {
-                                                type = "text",
-                                                text = new { content = markdownContent }
-                                            }
-                                        }
-                                    }
+                                    return pageId; // Success - return the page ID
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"Mark2Notion API returned status: {status}");
+                                    return null;
                                 }
                             }
-                        };
-                        
-                        string contentJson = System.Text.Json.JsonSerializer.Serialize(markdownContentBody);
-                        var contentHttpContent = new StringContent(contentJson, Encoding.UTF8, "application/json");
-                        
-                        HttpResponseMessage contentResponse = await client.PatchAsync($"https://api.notion.com/v1/blocks/{pageId}/children", contentHttpContent);
-                        
-                        if (contentResponse.IsSuccessStatusCode)
-                        {
-                            return pageId; // Success - return the page ID
+                            else
+                            {
+                                Console.WriteLine($"Mark2Notion API error: {mark2NotionResponse.StatusCode}");
+                                Console.WriteLine($"Response: {mark2NotionResponseBody}");
+                                return null;
+                            }
                         }
                     }
                 }
                 return null; // Failed
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"Error in CreateNotionInvestorEntry: {ex.Message}");
                 return null; // Failed
             }
         }
