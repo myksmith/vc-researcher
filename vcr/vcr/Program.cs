@@ -65,6 +65,7 @@ class Program
             Console.WriteLine("  dotnet run --test-attio-list  # Test Attio list lookup for both target databases");
             Console.WriteLine("\nUtility commands:");
             Console.WriteLine("  dotnet run --fix-links <domain> # Update Attio with existing Notion research URL (no new research)");
+            Console.WriteLine("  dotnet run --research-only-no-links <domain> # Create new research in Notion only (no Attio updates)");
             return;
         }
 
@@ -104,6 +105,20 @@ class Program
             
             string domain = args[1];
             await FixAttioLinks(domain);
+            return;
+        }
+        
+        if (args[0] == "--research-only-no-links")
+        {
+            if (args.Length < 2)
+            {
+                Console.WriteLine("❌ Usage: dotnet run --research-only-no-links <investor-domain>");
+                Console.WriteLine("Example: dotnet run --research-only-no-links sequoiacap.com");
+                return;
+            }
+            
+            string domain = args[1];
+            await ResearchOnlyNoLinks(domain);
             return;
         }
 
@@ -873,6 +888,37 @@ This is a test entry for TestVC (testvc.vc).
         catch (Exception ex)
         {
             Console.WriteLine($"❌ Error fixing links for {investorDomain}: {ex.Message}");
+        }
+    }
+    
+    static async Task ResearchOnlyNoLinks(string investorDomain)
+    {
+        try
+        {
+            Console.WriteLine($"🔍 Research-only mode for {investorDomain} (no Attio updates)...");
+            
+            // Step 1: Get analysis from Perplexity
+            Console.WriteLine($"🧠 Querying Perplexity for VC analysis...");
+            string analysis = await QueryPerplexityForVCAnalysis(investorDomain);
+            Console.WriteLine("✅ Completed Perplexity analysis");
+            
+            // Step 2: Create Notion research entry
+            Console.WriteLine($"📝 Creating Notion research entry...");
+            string? notionUrl = await UpdateNotionDatabase("research-only-mode", investorDomain, analysis);
+            
+            if (notionUrl != null)
+            {
+                Console.WriteLine($"✅ Successfully created Notion research entry: {notionUrl}");
+                Console.WriteLine($"📊 Research completed for {investorDomain} - no Attio updates performed");
+            }
+            else
+            {
+                Console.WriteLine($"❌ Failed to create Notion research entry for {investorDomain}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error in research-only mode for {investorDomain}: {ex.Message}");
         }
     }
     
