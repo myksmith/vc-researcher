@@ -15,6 +15,22 @@ class Program
         {
             Console.WriteLine("Usage: dotnet run <investor-domain>");
             Console.WriteLine("Example: dotnet run example-vc.com");
+            Console.WriteLine("\nTest commands:");
+            Console.WriteLine("  dotnet run --test-notion    # Test Notion API connection");
+            Console.WriteLine("  dotnet run --test-attio     # Test Attio API connection");
+            return;
+        }
+
+        // Handle test commands
+        if (args[0] == "--test-notion")
+        {
+            await TestNotionConnection();
+            return;
+        }
+        
+        if (args[0] == "--test-attio")
+        {
+            await TestAttioConnection();
             return;
         }
 
@@ -172,5 +188,109 @@ class Program
         // TODO: Implement Attio API integration
         await Task.Delay(100); // Simulate API call
         Console.WriteLine($"[STUB] Would update Attio record {recordId} with analysis for {investorDomain}");
+    }
+
+    // Test functions for API connectivity
+    static async Task TestNotionConnection()
+    {
+        Console.WriteLine("🧪 Testing Notion API connection...");
+        
+        string notionToken = Environment.GetEnvironmentVariable("NOTION_ACCESS_TOKEN");
+        if (string.IsNullOrEmpty(notionToken))
+        {
+            Console.WriteLine("❌ NOTION_ACCESS_TOKEN environment variable not set");
+            return;
+        }
+
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
+            client.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
+
+            try
+            {
+                // Test by listing databases (requires integration to be shared with at least one database)
+                HttpResponseMessage response = await client.GetAsync("https://api.notion.com/v1/databases");
+                string responseBody = await response.Content.ReadAsStringAsync();
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine("✅ Notion API connection successful!");
+                    Console.WriteLine($"Response: {responseBody}");
+                    
+                    // Parse to show available databases
+                    JsonNode node = JsonNode.Parse(responseBody);
+                    var results = node?["results"]?.AsArray();
+                    if (results != null && results.Count > 0)
+                    {
+                        Console.WriteLine($"Found {results.Count} accessible database(s):");
+                        foreach (var db in results)
+                        {
+                            string id = db?["id"]?.ToString() ?? "unknown";
+                            string title = db?["title"]?.AsArray()?[0]?["plain_text"]?.ToString() ?? "Untitled";
+                            Console.WriteLine($"  - {title} (ID: {id})");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("No databases found. Make sure to share at least one database with your Notion integration.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Notion API error: {response.StatusCode}");
+                    Console.WriteLine($"Response: {responseBody}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Notion API connection failed: {ex.Message}");
+            }
+        }
+    }
+
+    static async Task TestAttioConnection()
+    {
+        Console.WriteLine("🧪 Testing Attio API connection...");
+        
+        string attioToken = Environment.GetEnvironmentVariable("ATTIO_ACCESS_TOKEN");
+        if (string.IsNullOrEmpty(attioToken))
+        {
+            Console.WriteLine("❌ ATTIO_ACCESS_TOKEN environment variable not set");
+            return;
+        }
+
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
+
+            try
+            {
+                // Test by getting workspace info
+                HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/workspace");
+                string responseBody = await response.Content.ReadAsStringAsync();
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine("✅ Attio API connection successful!");
+                    Console.WriteLine($"Response: {responseBody}");
+                    
+                    // Parse to show workspace info
+                    JsonNode node = JsonNode.Parse(responseBody);
+                    string workspaceName = node?["data"]?["name"]?.ToString() ?? "Unknown";
+                    string workspaceId = node?["data"]?["id"]?.ToString() ?? "Unknown";
+                    Console.WriteLine($"Connected to workspace: {workspaceName} (ID: {workspaceId})");
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Attio API error: {response.StatusCode}");
+                    Console.WriteLine($"Response: {responseBody}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Attio API connection failed: {ex.Message}");
+            }
+        }
     }
 }
