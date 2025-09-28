@@ -125,16 +125,16 @@ class Program
 
         try
         {
-            // Step 1: Verify records exist in both systems BEFORE doing expensive Perplexity call
-            Console.WriteLine($"🔍 Looking up records for {investorDomain}...");
+            // Step 1: Validate both systems are accessible BEFORE doing expensive Perplexity call
+            Console.WriteLine($"🔍 Validating systems for {investorDomain}...");
 
-            string notionRecordId = await FindNotionRecord(investorDomain);
+            string? notionDbOk = await ValidateNotionDatabase();
             string attioCompanyId = await FindAttioRecord(investorDomain);
 
-            // Early exit if either record is missing
-            if (notionRecordId == null)
+            // Early exit if either system is not available
+            if (notionDbOk == null)
             {
-                Console.WriteLine($"❌ Could not find Notion record for {investorDomain}");
+                Console.WriteLine($"❌ Could not access Notion Investor Research database");
                 return;
             }
 
@@ -144,14 +144,14 @@ class Program
                 return;
             }
 
-            Console.WriteLine("✅ Found records in both Notion and Attio");
+            Console.WriteLine("✅ Both Notion database and Attio company record are accessible");
 
             // Step 2: Get analysis from Perplexity (only after confirming records exist)
             string analysis = await QueryPerplexityForVCAnalysis(investorDomain);
             Console.WriteLine("✅ Completed Perplexity analysis");
 
             // Step 3: Create Notion research page
-            string? notionPageUrl = await UpdateNotionDatabase(notionRecordId, investorDomain, analysis);
+            string? notionPageUrl = await UpdateNotionDatabase("validated", investorDomain, analysis);
             if (notionPageUrl == null)
             {
                 Console.WriteLine("❌ Failed to create Notion page - cannot update Attio with URL");
@@ -251,14 +251,54 @@ class Program
         }
     }
 
-    static async Task<string> FindNotionRecord(string investorDomain)
+    static async Task<string?> ValidateNotionDatabase()
     {
-        // TODO: Search Notion database for matching record
-        // Return record ID if found, null if not found
-        await Task.Delay(100); // Simulate API call
-        
-        // Stubbed: Always return a mock record ID for now
-        return $"notion-record-{investorDomain.Replace(".", "-")}";
+        string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
+        if (string.IsNullOrEmpty(notionToken))
+        {
+            Console.WriteLine("❌ NOTION_API_KEY not set, cannot validate Notion database");
+            return null;
+        }
+
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
+            client.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
+
+            try
+            {
+                Console.WriteLine("🔍 Validating Notion Investor Research database...");
+                
+                // Try to query the Investor Research database to validate it exists and is accessible
+                var queryBody = new
+                {
+                    page_size = 1 // Just get one record to validate access
+                };
+                
+                string queryJson = System.Text.Json.JsonSerializer.Serialize(queryBody);
+                var queryContent = new StringContent(queryJson, Encoding.UTF8, "application/json");
+                
+                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", queryContent);
+                string responseBody = await response.Content.ReadAsStringAsync();
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine("✅ Notion Investor Research database is accessible");
+                    return "database-validated"; // Return success indicator
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Failed to access Notion database: {response.StatusCode}");
+                    Console.WriteLine($"Response: {responseBody}");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error validating Notion database: {ex.Message}");
+                return null;
+            }
+        }
     }
 
     static async Task<string?> FindAttioRecord(HttpClient client, string investorDomain)
