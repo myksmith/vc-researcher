@@ -137,13 +137,16 @@ class Program
                         role = "user",
                         content = $"Research the venture capital firm at {investorDomain} and evaluate whether it would be a good fit for Neo's $5M seed round based on the specific investor criteria provided below.\n\n" +
                                  $"INVESTOR CRITERIA CONTEXT:\n{investorCriteria}\n\n" +
-                                 $"Please analyze {investorDomain} against these criteria and provide:\n" +
+                                 $"IMPORTANT: Format your response as proper Markdown. Start your response with exactly this format on the first line:\n" +
+                                 $"VC Name: [Full Name of the VC Firm]\n\n" +
+                                 $"Then provide a comprehensive markdown analysis covering:\n" +
                                  $"1. How well they match our stage, check size, and sector focus\n" +
                                  $"2. Their relevant portfolio companies and track record\n" +
                                  $"3. Geographic alignment and investment thesis fit\n" +
                                  $"4. Overall recommendation (Strong Fit / Good Fit / Weak Fit / No Fit)\n" +
                                  $"5. Any specific partners or team members to target\n" +
-                                 $"6. Potential concerns or red flags"
+                                 $"6. Potential concerns or red flags\n\n" +
+                                 $"Use proper markdown formatting with headers, bullet points, bold text, etc."
                     }
                 }
             };
@@ -201,15 +204,21 @@ class Program
 
     static async Task UpdateNotionDatabase(string recordId, string investorDomain, string analysis)
     {
-        // Extract investor name from domain for display purposes
-        string investorName = investorDomain.Replace(".com", "").Replace(".vc", "").Replace(".", " ");
-        investorName = char.ToUpper(investorName[0]) + investorName.Substring(1);
+        // Extract VC name from the analysis response
+        string vcName = ExtractVCNameFromResponse(analysis);
         
-        string? pageId = await CreateNotionInvestorEntry(investorDomain, investorName, analysis);
+        // If extraction failed, fall back to domain-based name
+        if (vcName == "Unknown VC")
+        {
+            vcName = investorDomain.Replace(".com", "").Replace(".vc", "").Replace(".", " ");
+            vcName = char.ToUpper(vcName[0]) + vcName.Substring(1);
+        }
+        
+        string? pageId = await CreateNotionInvestorEntry(investorDomain, vcName, analysis);
         
         if (pageId != null)
         {
-            Console.WriteLine($"Created Notion entry for {investorName}: https://notion.so/{pageId.Replace("-", "")}");
+            Console.WriteLine($"Created Notion entry for {vcName}: https://notion.so/{pageId.Replace("-", "")}");
         }
         else
         {
@@ -543,11 +552,26 @@ class Program
                     if (!string.IsNullOrEmpty(pageId))
                     {
                         // Step 2: Add markdown content to the page
-                        var contentBlocks = ConvertMarkdownToNotionBlocks(markdownContent);
-                        
                         var markdownContentBody = new
                         {
-                            children = contentBlocks
+                            children = new object[]
+                            {
+                                new
+                                {
+                                    type = "paragraph",
+                                    paragraph = new
+                                    {
+                                        rich_text = new object[]
+                                        {
+                                            new
+                                            {
+                                                type = "text",
+                                                text = new { content = markdownContent }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         };
                         
                         string contentJson = System.Text.Json.JsonSerializer.Serialize(markdownContentBody);
@@ -570,30 +594,31 @@ class Program
         }
     }
 
-    static object[] ConvertMarkdownToNotionBlocks(string markdownContent)
+    static string ExtractVCNameFromResponse(string response)
     {
-        // Simple markdown to Notion blocks converter
-        // For now, just wrap the entire content in a paragraph
-        // This can be enhanced to parse actual markdown later
-        return new object[]
+        // Look for "VC Name: [name]" at the beginning of the response
+        var lines = response.Split('\n');
+        if (lines.Length > 0)
         {
-            new
+            string firstLine = lines[0].Trim();
+            if (firstLine.StartsWith("VC Name:", StringComparison.OrdinalIgnoreCase))
             {
-                type = "paragraph",
-                paragraph = new
+                string vcName = firstLine.Substring(8).Trim(); // Remove "VC Name:" prefix
+                
+                // Clean markdown formatting (remove ** and other markdown symbols)
+                vcName = vcName.Replace("**", "").Replace("*", "").Trim();
+                
+                if (!string.IsNullOrEmpty(vcName))
                 {
-                    rich_text = new object[]
-                    {
-                        new
-                        {
-                            type = "text",
-                            text = new { content = markdownContent }
-                        }
-                    }
+                    return vcName;
                 }
             }
-        };
+        }
+        
+        // Fallback: derive from domain if parsing fails
+        return "Unknown VC";
     }
+
 
     static async Task TestNotionInsert()
     {
