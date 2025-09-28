@@ -195,10 +195,10 @@ class Program
     {
         Console.WriteLine("🧪 Testing Notion API connection...");
         
-        string notionToken = Environment.GetEnvironmentVariable("NOTION_ACCESS_TOKEN");
+        string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
         if (string.IsNullOrEmpty(notionToken))
         {
-            Console.WriteLine("❌ NOTION_ACCESS_TOKEN environment variable not set");
+            Console.WriteLine("❌ NOTION_API_KEY environment variable not set");
             return;
         }
 
@@ -253,10 +253,10 @@ class Program
     {
         Console.WriteLine("🧪 Testing Attio API connection...");
         
-        string attioToken = Environment.GetEnvironmentVariable("ATTIO_ACCESS_TOKEN");
+        string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
         if (string.IsNullOrEmpty(attioToken))
         {
-            Console.WriteLine("❌ ATTIO_ACCESS_TOKEN environment variable not set");
+            Console.WriteLine("❌ ATTIO_API_KEY environment variable not set");
             return;
         }
 
