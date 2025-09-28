@@ -16,9 +16,10 @@ class Program
             Console.WriteLine("Usage: dotnet run <investor-domain>");
             Console.WriteLine("Example: dotnet run example-vc.com");
             Console.WriteLine("\nTest commands:");
-            Console.WriteLine("  dotnet run --test-notion    # Test Notion API connection");
-            Console.WriteLine("  dotnet run --ping-attio     # Ping Attio API for basic connectivity");
-            Console.WriteLine("  dotnet run --test-attio-list # Test Attio list lookup for 'Preseed VCs from Notion'");
+            Console.WriteLine("  dotnet run --test-notion      # Test Notion API connection");
+            Console.WriteLine("  dotnet run --test-notion-insert # Test Notion database entry creation with markdown");
+            Console.WriteLine("  dotnet run --ping-attio       # Ping Attio API for basic connectivity");
+            Console.WriteLine("  dotnet run --test-attio-list  # Test Attio list lookup for 'Preseed VCs from Notion'");
             return;
         }
 
@@ -26,6 +27,12 @@ class Program
         if (args[0] == "--test-notion")
         {
             await TestNotionConnection();
+            return;
+        }
+        
+        if (args[0] == "--test-notion-insert")
+        {
+            await TestNotionInsert();
             return;
         }
         
@@ -463,6 +470,206 @@ class Program
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Attio list test failed: {ex.Message}");
+            }
+        }
+    }
+
+    static async Task TestNotionInsert()
+    {
+        Console.WriteLine("📝 Testing Notion database entry creation with markdown content...");
+        
+        string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
+        if (string.IsNullOrEmpty(notionToken))
+        {
+            Console.WriteLine("❌ NOTION_API_KEY environment variable not set");
+            return;
+        }
+
+        string databaseId = "27b6ef03-8cf6-8059-9860-c0ec6873c896"; // Investor Research database ID
+
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
+            client.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
+
+            try
+            {
+                // Step 1: Create database entry with basic fields
+                Console.WriteLine("Creating database entry for testvc...");
+                
+                var createPageBody = new
+                {
+                    parent = new { database_id = databaseId },
+                    properties = new Dictionary<string, object>
+                    {
+                        ["Domain"] = new
+                        {
+                            url = "https://testvc.vc"
+                        },
+                        ["Investor Name"] = new
+                        {
+                            title = new object[]
+                            {
+                                new
+                                {
+                                    type = "text",
+                                    text = new { content = "TestVC" }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                string createJson = System.Text.Json.JsonSerializer.Serialize(createPageBody);
+                var createContent = new StringContent(createJson, Encoding.UTF8, "application/json");
+                
+                HttpResponseMessage createResponse = await client.PostAsync("https://api.notion.com/v1/pages", createContent);
+                string createResponseBody = await createResponse.Content.ReadAsStringAsync();
+                
+                if (createResponse.IsSuccessStatusCode)
+                {
+                    Console.WriteLine("✅ Database entry created successfully!");
+                    
+                    // Parse response to get the page ID
+                    JsonNode createNode = JsonNode.Parse(createResponseBody);
+                    string pageId = createNode?["id"]?.ToString();
+                    
+                    if (!string.IsNullOrEmpty(pageId))
+                    {
+                        Console.WriteLine($"Page ID: {pageId}");
+                        
+                        // Step 2: Add markdown content to the page
+                        Console.WriteLine("Adding markdown content to page...");
+                        
+                        var markdownContent = new
+                        {
+                            children = new object[]
+                            {
+                                new
+                                {
+                                    type = "heading_1",
+                                    heading_1 = new
+                                    {
+                                        rich_text = new object[]
+                                        {
+                                            new
+                                            {
+                                                type = "text",
+                                                text = new { content = "TestVC Analysis" }
+                                            }
+                                        }
+                                    }
+                                },
+                                new
+                                {
+                                    type = "paragraph",
+                                    paragraph = new
+                                    {
+                                        rich_text = new object[]
+                                        {
+                                            new
+                                            {
+                                                type = "text",
+                                                text = new { content = "This is a test entry for TestVC (testvc.vc)." }
+                                            }
+                                        }
+                                    }
+                                },
+                                new
+                                {
+                                    type = "heading_2",
+                                    heading_2 = new
+                                    {
+                                        rich_text = new object[]
+                                        {
+                                            new
+                                            {
+                                                type = "text",
+                                                text = new { content = "Investment Criteria Match" }
+                                            }
+                                        }
+                                    }
+                                },
+                                new
+                                {
+                                    type = "bulleted_list_item",
+                                    bulleted_list_item = new
+                                    {
+                                        rich_text = new object[]
+                                        {
+                                            new
+                                            {
+                                                type = "text",
+                                                text = new { content = "Stage: Seed stage focus" }
+                                            }
+                                        }
+                                    }
+                                },
+                                new
+                                {
+                                    type = "bulleted_list_item",
+                                    bulleted_list_item = new
+                                    {
+                                        rich_text = new object[]
+                                        {
+                                            new
+                                            {
+                                                type = "text",
+                                                text = new { content = "Check size: $1M-$5M range" }
+                                            }
+                                        }
+                                    }
+                                },
+                                new
+                                {
+                                    type = "paragraph",
+                                    paragraph = new
+                                    {
+                                        rich_text = new object[]
+                                        {
+                                            new
+                                            {
+                                                type = "text",
+                                                text = new { content = "Overall: Good test case for API integration." },
+                                                annotations = new { bold = true }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        };
+                        
+                        string contentJson = System.Text.Json.JsonSerializer.Serialize(markdownContent);
+                        var contentHttpContent = new StringContent(contentJson, Encoding.UTF8, "application/json");
+                        
+                        HttpResponseMessage contentResponse = await client.PatchAsync($"https://api.notion.com/v1/blocks/{pageId}/children", contentHttpContent);
+                        string contentResponseBody = await contentResponse.Content.ReadAsStringAsync();
+                        
+                        if (contentResponse.IsSuccessStatusCode)
+                        {
+                            Console.WriteLine("✅ Markdown content added to page successfully!");
+                            Console.WriteLine($"TestVC entry created with page content at: https://notion.so/{pageId.Replace("-", "")}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"❌ Failed to add content to page: {contentResponse.StatusCode}");
+                            Console.WriteLine($"Response: {contentResponseBody}");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("❌ Could not extract page ID from response");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Failed to create database entry: {createResponse.StatusCode}");
+                    Console.WriteLine($"Response: {createResponseBody}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Notion insert test failed: {ex.Message}");
             }
         }
     }
