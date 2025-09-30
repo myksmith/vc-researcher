@@ -225,6 +225,9 @@ class Program
             await UpdateAttioCRM(attioCompanyId, investorDomain, notionPageUrl);
             Console.WriteLine("✅ Updated Attio company record");
 
+            // Step 5: Add Perplexity research as a note to the Attio company record
+            await AddNoteToAttioRecord(attioCompanyId, perplexityJson);
+
             Console.WriteLine($"🎉 Successfully processed {investorDomain}");
         }
         catch (Exception ex)
@@ -366,11 +369,31 @@ class Program
     {
         // Extract the chat content from the JSON response
         string content = perplexityJson["choices"][0]["message"]["content"].ToString();
-        
+
         // Escape dollar signs to prevent them from being interpreted as LaTeX math or other special formatting in Notion
         string escapedContent = content.Replace("$", "\\$");
-        
+
         return escapedContent;
+    }
+
+    static async Task AddNoteToAttioRecord(string attioCompanyId, JsonNode perplexityJson)
+    {
+        // Step 5: Add Perplexity research as a note to the Attio company record
+        string perplexityMarkdown = RenderPerplexityJsonToNotion(perplexityJson);
+        // Remove the dollar sign escaping since Attio doesn't need it
+        string attioMarkdown = perplexityMarkdown.Replace("\\$", "$");
+
+        Console.WriteLine("📝 Adding Perplexity research note to Attio...");
+        bool noteCreated = await AttioHelper.CreateAttioNote(attioCompanyId, "Perplexity Research", attioMarkdown, NoteFormat.Markdown);
+
+        if (noteCreated)
+        {
+            Console.WriteLine("✅ Added Perplexity research note to Attio");
+        }
+        else
+        {
+            Console.WriteLine("⚠️  Failed to add Perplexity research note to Attio");
+        }
     }
     
     static async Task<string?> UpdateNotionDatabase(string recordId, string investorDomain, JsonNode perplexityJson)
@@ -1022,6 +1045,9 @@ This is a test entry for TestVC (testvc.vc).
             // Step 6: Update Attio company record with the new Notion URL
             await UpdateAttioCRM(attioCompanyId, investorDomain, notionPageUrl);
             Console.WriteLine("✅ Updated Attio company record");
+
+            // Step 7: Add Perplexity research as a note to the Attio company record
+            await AddNoteToAttioRecord(attioCompanyId, perplexityJson);
 
             Console.WriteLine($"🎉 Successfully regenerated research for {investorDomain}");
         }

@@ -8,6 +8,12 @@ using System.Threading.Tasks;
 
 namespace vcrutils
 {
+    public enum NoteFormat
+    {
+        Plaintext,
+        Markdown
+    }
+
     public static class AttioHelper
     {
         // Singleton HTTP Client
@@ -143,6 +149,51 @@ namespace vcrutils
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error updating company record: {ex.Message}");
+                return false;
+            }
+        }
+
+        public static async Task<bool> CreateAttioNote(string recordId, string titleString, string contentString, NoteFormat format)
+        {
+            try
+            {
+                HttpClient client = GetAttioClient();
+
+                string formatString = format == NoteFormat.Markdown ? "markdown" : "plaintext";
+
+                var requestBody = new
+                {
+                    data = new
+                    {
+                        parent_object = "companies",
+                        parent_record_id = recordId,
+                        title = titleString,
+                        format = formatString,
+                        content = contentString
+                    }
+                };
+
+                string jsonBody = JsonSerializer.Serialize(requestBody);
+                var httpContent = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await client.PostAsync("https://api.attio.com/v2/notes", httpContent);
+                string responseBody = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"Note created successfully");
+                    return true;
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to create note: {response.StatusCode}");
+                    Console.WriteLine($"Response: {responseBody}");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating note: {ex.Message}");
                 return false;
             }
         }
