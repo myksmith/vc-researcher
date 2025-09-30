@@ -147,11 +147,16 @@ class Program
             Console.WriteLine("✅ Both Notion database and Attio company record are accessible");
 
             // Step 2: Get analysis from Perplexity (only after confirming records exist)
-            string analysis = await QueryPerplexityForVCAnalysis(investorDomain);
+            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain);
+            if (perplexityJson == null)
+            {
+                Console.WriteLine("❌ Failed to get analysis from Perplexity");
+                return;
+            }
             Console.WriteLine("✅ Completed Perplexity analysis");
 
             // Step 3: Create Notion research page
-            string? notionPageUrl = await UpdateNotionDatabase("validated", investorDomain, analysis);
+            string? notionPageUrl = await UpdateNotionDatabase("validated", investorDomain, perplexityJson);
             if (notionPageUrl == null)
             {
                 Console.WriteLine("❌ Failed to create Notion page - cannot update Attio with URL");
@@ -171,7 +176,7 @@ class Program
         }
     }
 
-    static async Task<string> QueryPerplexityForVCAnalysis(string investorDomain)
+    static async Task<JsonNode?> QueryPerplexityForVCAnalysis(string investorDomain)
     {
         string apiUrl = "https://api.perplexity.ai/chat/completions";
         string apiKey = Environment.GetEnvironmentVariable("SONAR_API_KEY");
@@ -239,10 +244,7 @@ class Program
                 Console.WriteLine("Response: " + responseBody);
 
                 JsonNode node = JsonNode.Parse(responseBody);
-                string chatResponse = node["choices"][0]["message"]["content"].ToString();
-
-                Console.WriteLine("Chat response only: " + chatResponse);
-                return chatResponse;
+                return node; // Return the full JSON response
             }
             catch (Exception ex)
             {
@@ -372,8 +374,17 @@ class Program
         }
     }
 
-    static async Task<string?> UpdateNotionDatabase(string recordId, string investorDomain, string analysis)
+    static string RenderPerplexityJsonToNotion(JsonNode perplexityJson)
     {
+        // Extract the chat content from the JSON response
+        return perplexityJson["choices"][0]["message"]["content"].ToString();
+    }
+    
+    static async Task<string?> UpdateNotionDatabase(string recordId, string investorDomain, JsonNode perplexityJson)
+    {
+        // Render the JSON to markdown content
+        string analysis = RenderPerplexityJsonToNotion(perplexityJson);
+        
         // Extract VC name from the analysis response
         string vcName = ExtractVCNameFromResponse(analysis);
         
@@ -970,12 +981,17 @@ This is a test entry for TestVC (testvc.vc).
             
             // Step 1: Get analysis from Perplexity
             Console.WriteLine($"🧠 Querying Perplexity for VC analysis...");
-            string analysis = await QueryPerplexityForVCAnalysis(investorDomain);
+            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain);
+            if (perplexityJson == null)
+            {
+                Console.WriteLine("❌ Failed to get analysis from Perplexity");
+                return;
+            }
             Console.WriteLine("✅ Completed Perplexity analysis");
             
             // Step 2: Create Notion research entry
             Console.WriteLine($"📝 Creating Notion research entry...");
-            string? notionUrl = await UpdateNotionDatabase("research-only-mode", investorDomain, analysis);
+            string? notionUrl = await UpdateNotionDatabase("research-only-mode", investorDomain, perplexityJson);
             
             if (notionUrl != null)
             {
