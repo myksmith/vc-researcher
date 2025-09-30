@@ -11,8 +11,8 @@ The goal is to ensure a focused search targeting funds most aligned with Neo’s
 Seed and early-stage funds (pre-seed/seed/Series A), plus multi-stage funds with active seed practices.  
 
 **Cheque size range:**  
-$1M–$5M, ideally with capacity to lead/co-lead a $5M round. Target funds to lead that can write $2M–$3M lead checks.  
-Do not exclude VCs with cheque sizes $500k or more; just let me know that they are incapable of leading (and therefore I will prioritize later)
+\$1M–\$5M, ideally with capacity to lead/co-lead a \$5M round. Target funds to lead that can write \$2M–\$3M lead checks.  
+Do not exclude VCs with cheque sizes \$500k or more; just let me know that they are incapable of leading (and therefore I will prioritize later)
 
 **Geo focus:**  
 US, UK, and Western Europe (London, Berlin, Paris). Include global AI/infra-focused funds with enterprise track records.  
@@ -37,10 +37,10 @@ Funds with meaningful reserves for pro-rata and follow-on participation through 
 Investors who bring enterprise GTM playbooks, CIO/CTO connections, MSP/SI networks, and technical AI expertise.  
 
 **Check frequency / lead vs. follow:**  
-Preference for funds that frequently lead $3M–$5M seed rounds, not only followers.  
+Preference for funds that frequently lead \$3M–\$5M seed rounds, not only followers.  
 
 **Capital availability:**  
-Funds that raised within the last 3 years, with $100M+ fund size, and demonstrable dry powder (actively deploying).  
+Funds that raised within the last 3 years, with \$100M+ fund size, and demonstrable dry powder (actively deploying).  
 
 ## Conclusion
 These criteria define the “ideal investor profile” for Neo’s seed round. 
