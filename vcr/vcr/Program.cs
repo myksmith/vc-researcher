@@ -113,9 +113,11 @@ class Program
         {
             Console.WriteLine("Usage: dotnet run <investor-domain>");
             Console.WriteLine("       dotnet run --force-research <investor-domain>");
+            Console.WriteLine("       dotnet run --regen-research <investor-domain>");
             Console.WriteLine("\nExamples:");
             Console.WriteLine("  dotnet run example-vc.com                    # Create research (aborts if already exists)");
             Console.WriteLine("  dotnet run --force-research example-vc.com   # Create research even if duplicates exist");
+            Console.WriteLine("  dotnet run --regen-research example-vc.com   # Delete existing research and create new one");
             Console.WriteLine("\nTest commands:");
             Console.WriteLine("  dotnet run --test-notion      # Test Notion API connection");
             Console.WriteLine("  dotnet run --test-notion-insert # Test Notion database entry creation with markdown");
@@ -174,16 +176,30 @@ class Program
                 Console.WriteLine("Example: dotnet run --research-only-no-links sequoiacap.com");
                 return;
             }
-            
+
             string domain = args[1];
             await ResearchOnlyNoLinks(domain);
+            return;
+        }
+
+        if (args[0] == "--regen-research")
+        {
+            if (args.Length < 2)
+            {
+                Console.WriteLine("❌ Usage: dotnet run --regen-research <investor-domain>");
+                Console.WriteLine("Example: dotnet run --regen-research sequoiacap.com");
+                return;
+            }
+
+            string domain = args[1];
+            await RegenerateResearch(domain);
             return;
         }
 
         // Parse arguments for force-research flag
         bool forceResearch = false;
         string investorDomain;
-        
+
         if (args[0] == "--force-research")
         {
             if (args.Length < 2)
@@ -1167,24 +1183,24 @@ This is a test entry for TestVC (testvc.vc).
                         }
                     }
                 };
-                
+
                 string searchJson = System.Text.Json.JsonSerializer.Serialize(searchBody);
                 var searchContent = new StringContent(searchJson, Encoding.UTF8, "application/json");
-                
+
                 HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent);
                 string responseBody = await response.Content.ReadAsStringAsync();
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     JsonNode node = JsonNode.Parse(responseBody);
                     var results = node?["results"]?.AsArray();
-                    
+
                     if (results != null && results.Count > 0)
                     {
                         // Get the first matching page
                         var firstResult = results[0];
                         string? pageId = firstResult?["id"]?.ToString();
-                        
+
                         if (!string.IsNullOrEmpty(pageId))
                         {
                             // Return the Notion URL
@@ -1192,7 +1208,7 @@ This is a test entry for TestVC (testvc.vc).
                         }
                     }
                 }
-                
+
                 return null;
             }
             catch (Exception ex)
@@ -1205,6 +1221,26 @@ This is a test entry for TestVC (testvc.vc).
         {
             Console.WriteLine($"❌ {ex.Message}");
             return null;
+        }
+    }
+
+    static async Task RegenerateResearch(string investorDomain)
+    {
+        try
+        {
+            Console.WriteLine($"🔄 Regenerating research for {investorDomain}...");
+
+            // TODO: Implement the following steps:
+            // 1. Find existing Notion research page by domain
+            // 2. Delete the existing Notion page
+            // 3. Run the full research workflow (Perplexity + create new Notion entry + update Attio)
+
+            Console.WriteLine("⚠️  This feature is not yet implemented.");
+            Console.WriteLine("   Coming soon: Will delete existing research and create a fresh analysis.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error regenerating research for {investorDomain}: {ex.Message}");
         }
     }
 }
