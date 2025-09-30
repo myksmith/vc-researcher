@@ -11,42 +11,6 @@ class Program
 {
     // Note: We now update company records directly instead of list-specific records
 
-    // Singleton HTTP Clients
-    private static HttpClient? _attioClient;
-    private static HttpClient? _perplexityClient;
-
-    static HttpClient GetAttioClient()
-    {
-        if (_attioClient == null)
-        {
-            string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
-            if (string.IsNullOrEmpty(attioToken))
-            {
-                throw new InvalidOperationException("ATTIO_API_KEY environment variable not set");
-            }
-
-            _attioClient = new HttpClient();
-            _attioClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
-        }
-        return _attioClient;
-    }
-
-    static HttpClient GetPerplexityClient()
-    {
-        if (_perplexityClient == null)
-        {
-            string apiKey = Environment.GetEnvironmentVariable("SONAR_API_KEY");
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                throw new InvalidOperationException("SONAR_API_KEY environment variable not set");
-            }
-
-            _perplexityClient = new HttpClient();
-            _perplexityClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-        }
-        return _perplexityClient;
-    }
-
     static async Task Main(string[] args)
     {
         // Environment variable validation - check all required API keys
@@ -202,7 +166,7 @@ class Program
             if (!forceResearch)
             {
                 Console.WriteLine($"🔍 Checking if research already exists for {investorDomain}...");
-                bool domainExists = await CheckNotionDomainExists(investorDomain);
+                bool domainExists = await NotionHelper.CheckNotionDomainExists(investorDomain);
                 
                 if (domainExists)
                 {
@@ -222,7 +186,7 @@ class Program
             Console.WriteLine($"🔍 Validating systems for {investorDomain}...");
 
             string? notionDbOk = await ValidateNotionDatabase();
-            string attioCompanyId = await FindAttioRecord(investorDomain);
+            string attioCompanyId = await AttioHelper.FindAttioRecord(investorDomain);
 
             // Early exit if either system is not available
             if (notionDbOk == null)
@@ -298,7 +262,7 @@ class Program
 
         try
         {
-            HttpClient client = GetPerplexityClient();
+            HttpClient client = PerplexityHelper.GetPerplexityClient();
 
             var requestBody = new
             {
@@ -397,75 +361,6 @@ class Program
         }
     }
 
-    static async Task<string?> FindAttioRecord(HttpClient client, string investorDomain)
-    {
-        try
-        {
-            Console.WriteLine($"🔍 Searching for company record matching {investorDomain}...");
-            
-            // Query Attio companies using domains filter
-            var queryBody = new
-            {
-                filter = new
-                {
-                    domains = investorDomain
-                }
-            };
-            
-            string queryJson = System.Text.Json.JsonSerializer.Serialize(queryBody);
-            var queryContent = new StringContent(queryJson, Encoding.UTF8, "application/json");
-            
-            HttpResponseMessage response = await client.PostAsync("https://api.attio.com/v2/objects/companies/records/query", queryContent);
-            string responseBody = await response.Content.ReadAsStringAsync();
-            
-            if (response.IsSuccessStatusCode)
-            {
-                JsonNode node = JsonNode.Parse(responseBody);
-                var records = node?["data"]?.AsArray();
-                
-                if (records != null && records.Count > 0)
-                {
-                    // Get the first matching record
-                    var firstRecord = records[0];
-                    string? recordId = firstRecord?["id"]?["record_id"]?.ToString();
-                    string? companyName = firstRecord?["values"]?["name"]?.AsArray()?[0]?["value"]?.ToString();
-                    
-                    if (!string.IsNullOrEmpty(recordId))
-                    {
-                        Console.WriteLine($"✅ Found company record: {companyName ?? "Unknown"} (ID: {recordId})");
-                        return recordId;
-                    }
-                }
-            }
-            else
-            {
-                Console.WriteLine($"❌ Failed to search company records: {response.StatusCode}");
-                Console.WriteLine($"Response: {responseBody}");
-            }
-            
-            return null;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error searching Attio company records: {ex.Message}");
-            return null;
-        }
-    }
-    
-    // Wrapper for main workflow validation
-    static async Task<string> FindAttioRecord(string investorDomain)
-    {
-        try
-        {
-            HttpClient client = GetAttioClient();
-            return await FindAttioRecord(client, investorDomain);
-        }
-        catch (InvalidOperationException ex)
-        {
-            Console.WriteLine($"❌ {ex.Message}");
-            return null;
-        }
-    }
 
     static string RenderPerplexityJsonToNotion(JsonNode perplexityJson)
     {
@@ -512,23 +407,23 @@ class Program
     {
         try
         {
-            HttpClient client = GetAttioClient();
+            HttpClient client = AttioHelper.GetAttioClient();
 
             try
             {
                 Console.WriteLine($"🔍 Searching for {investorDomain} in Attio company records...");
                 
                 // Step 1: Find the company record by searching
-                string? companyRecordId = await FindAttioRecord(client, investorDomain);
-                
+                string? companyRecordId = await AttioHelper.FindAttioRecord(client, investorDomain);
+
                 if (companyRecordId == null)
                 {
                     Console.WriteLine($"⚠️  No company records found for {investorDomain}");
                     return;
                 }
-                
+
                 // Step 2: Update the company record with the found record ID
-                bool updated = await UpdateAttioCompanyRecord(client, companyRecordId, notionUrl);
+                bool updated = await AttioHelper.UpdateAttioCompanyRecord(client, companyRecordId, notionUrl);
                 
                 if (updated)
                 {
@@ -550,53 +445,6 @@ class Program
         }
     }
     
-    static async Task<bool> UpdateAttioCompanyRecord(HttpClient client, string recordId, string notionUrl)
-    {
-        try
-        {
-            Console.WriteLine($"🔄 Updating company record (ID: {recordId}) with Notion URL...");
-            
-            var updateBody = new
-            {
-                data = new
-                {
-                    values = new Dictionary<string, object[]>
-                    {
-                        ["notion_research_url"] = new object[]
-                        {
-                            new
-                            {
-                                value = notionUrl
-                            }
-                        }
-                    }
-                }
-            };
-            
-            string updateJson = System.Text.Json.JsonSerializer.Serialize(updateBody);
-            var updateContent = new StringContent(updateJson, Encoding.UTF8, "application/json");
-            
-            HttpResponseMessage updateResponse = await client.PatchAsync($"https://api.attio.com/v2/objects/companies/records/{recordId}", updateContent);
-            string updateResponseBody = await updateResponse.Content.ReadAsStringAsync();
-            
-            if (updateResponse.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"✅ Successfully updated company with Notion Research URL");
-                return true;
-            }
-            else
-            {
-                Console.WriteLine($"❌ Failed to update company record: {updateResponse.StatusCode}");
-                Console.WriteLine($"Response: {updateResponseBody}");
-                return false;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"❌ Error updating company record: {ex.Message}");
-            return false;
-        }
-    }
 
     // Test functions for API connectivity
     static async Task TestNotionConnection()
@@ -679,7 +527,7 @@ class Program
 
         try
         {
-            HttpClient client = GetAttioClient();
+            HttpClient client = AttioHelper.GetAttioClient();
 
             try
             {
@@ -718,7 +566,7 @@ class Program
 
         try
         {
-            HttpClient client = GetAttioClient();
+            HttpClient client = AttioHelper.GetAttioClient();
 
             try
             {
@@ -1093,171 +941,16 @@ This is a test entry for TestVC (testvc.vc).
         }
     }
     
-    static async Task<bool> CheckNotionDomainExists(string investorDomain)
-    {
-        try
-        {
-            HttpClient client = NotionHelper.GetNotionClient();
-
-            try
-            {
-                // Search the Investor Research database for pages with matching domain
-                var searchBody = new
-                {
-                    filter = new
-                    {
-                        property = "Domain",
-                        url = new
-                        {
-                            contains = investorDomain
-                        }
-                    }
-                };
-                
-                string searchJson = System.Text.Json.JsonSerializer.Serialize(searchBody);
-                var searchContent = new StringContent(searchJson, Encoding.UTF8, "application/json");
-                
-                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NotionHelper.NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent);
-                string responseBody = await response.Content.ReadAsStringAsync();
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    JsonNode node = JsonNode.Parse(responseBody);
-                    var results = node?["results"]?.AsArray();
-                    
-                    return results != null && results.Count > 0;
-                }
-                
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error checking Notion database: {ex.Message}");
-                return false;
-            }
-        }
-        catch (InvalidOperationException ex)
-        {
-            Console.WriteLine($"❌ {ex.Message}");
-            return false;
-        }
-    }
     
-    static async Task<string?> FindExistingNotionPageId(string investorDomain)
-    {
-        try
-        {
-            HttpClient client = NotionHelper.GetNotionClient();
-
-            try
-            {
-                // Search the Investor Research database for pages with matching domain
-                var searchBody = new
-                {
-                    filter = new
-                    {
-                        property = "Domain",
-                        url = new
-                        {
-                            contains = investorDomain
-                        }
-                    }
-                };
-
-                string searchJson = System.Text.Json.JsonSerializer.Serialize(searchBody);
-                var searchContent = new StringContent(searchJson, Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NotionHelper.NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent);
-                string responseBody = await response.Content.ReadAsStringAsync();
-
-                if (response.IsSuccessStatusCode)
-                {
-                    JsonNode node = JsonNode.Parse(responseBody);
-                    var results = node?["results"]?.AsArray();
-
-                    if (results != null && results.Count > 0)
-                    {
-                        // Get the first matching page
-                        var firstResult = results[0];
-                        string? pageId = firstResult?["id"]?.ToString();
-
-                        if (!string.IsNullOrEmpty(pageId))
-                        {
-                            return pageId;
-                        }
-                    }
-                }
-
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error searching Notion database: {ex.Message}");
-                return null;
-            }
-        }
-        catch (InvalidOperationException ex)
-        {
-            Console.WriteLine($"❌ {ex.Message}");
-            return null;
-        }
-    }
 
     static async Task<string?> FindExistingNotionResearch(string investorDomain)
     {
-        string? pageId = await FindExistingNotionPageId(investorDomain);
+        string? pageId = await NotionHelper.FindExistingNotionPageId(investorDomain);
         if (!string.IsNullOrEmpty(pageId))
         {
             return $"https://notion.so/{pageId.Replace("-", "")}";
         }
         return null;
-    }
-
-    static async Task<bool> DeleteNotionPage(string pageId)
-    {
-        try
-        {
-            HttpClient client = NotionHelper.GetNotionClient();
-
-            try
-            {
-                Console.WriteLine($"🗑️  Deleting Notion page (ID: {pageId})...");
-
-                // Archive (delete) the page using Notion API
-                var updateBody = new
-                {
-                    archived = true
-                };
-
-                string updateJson = System.Text.Json.JsonSerializer.Serialize(updateBody);
-                var updateContent = new StringContent(updateJson, Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.PatchAsync($"https://api.notion.com/v1/pages/{pageId}", updateContent);
-                string responseBody = await response.Content.ReadAsStringAsync();
-
-                if (response.IsSuccessStatusCode)
-                {
-                    Console.WriteLine("✅ Successfully deleted existing Notion page");
-                    return true;
-                }
-                else
-                {
-                    Console.WriteLine($"❌ Failed to delete Notion page: {response.StatusCode}");
-                    Console.WriteLine($"Response: {responseBody}");
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Error deleting Notion page: {ex.Message}");
-                return false;
-            }
-        }
-        catch (InvalidOperationException ex)
-        {
-            Console.WriteLine($"❌ {ex.Message}");
-            return false;
-        }
     }
 
     static async Task RegenerateResearch(string investorDomain)
@@ -1268,7 +961,7 @@ This is a test entry for TestVC (testvc.vc).
 
             // Step 1: Find existing Notion research page by domain
             Console.WriteLine($"🔍 Searching for existing research...");
-            string? existingPageId = await FindExistingNotionPageId(investorDomain);
+            string? existingPageId = await NotionHelper.FindExistingNotionPageId(investorDomain);
 
             if (existingPageId == null)
             {
@@ -1280,7 +973,7 @@ This is a test entry for TestVC (testvc.vc).
             Console.WriteLine($"✅ Found existing research (Page ID: {existingPageId})");
 
             // Step 2: Delete the existing Notion page
-            bool deleted = await DeleteNotionPage(existingPageId);
+            bool deleted = await NotionHelper.DeleteNotionPage(existingPageId);
             if (!deleted)
             {
                 Console.WriteLine($"❌ Failed to delete existing research - aborting regeneration");
@@ -1291,7 +984,7 @@ This is a test entry for TestVC (testvc.vc).
             Console.WriteLine($"🔍 Validating systems for {investorDomain}...");
 
             string? notionDbOk = await ValidateNotionDatabase();
-            string attioCompanyId = await FindAttioRecord(investorDomain);
+            string attioCompanyId = await AttioHelper.FindAttioRecord(investorDomain);
 
             // Early exit if either system is not available
             if (notionDbOk == null)
