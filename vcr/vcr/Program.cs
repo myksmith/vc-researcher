@@ -56,7 +56,10 @@ class Program
         if (args.Length == 0)
         {
             Console.WriteLine("Usage: dotnet run <investor-domain>");
-            Console.WriteLine("Example: dotnet run example-vc.com");
+            Console.WriteLine("       dotnet run --force-research <investor-domain>");
+            Console.WriteLine("\nExamples:");
+            Console.WriteLine("  dotnet run example-vc.com                    # Create research (aborts if already exists)");
+            Console.WriteLine("  dotnet run --force-research example-vc.com   # Create research even if duplicates exist");
             Console.WriteLine("\nTest commands:");
             Console.WriteLine("  dotnet run --test-notion      # Test Notion API connection");
             Console.WriteLine("  dotnet run --test-notion-insert # Test Notion database entry creation with markdown");
@@ -121,10 +124,48 @@ class Program
             return;
         }
 
-        string investorDomain = args[0];
+        // Parse arguments for force-research flag
+        bool forceResearch = false;
+        string investorDomain;
+        
+        if (args[0] == "--force-research")
+        {
+            if (args.Length < 2)
+            {
+                Console.WriteLine("❌ Usage: dotnet run --force-research <investor-domain>");
+                Console.WriteLine("Example: dotnet run --force-research sequoiacap.com");
+                return;
+            }
+            forceResearch = true;
+            investorDomain = args[1];
+        }
+        else
+        {
+            investorDomain = args[0];
+        }
 
         try
         {
+            // Step 0: Check if research already exists (unless force flag is used)
+            if (!forceResearch)
+            {
+                Console.WriteLine($"🔍 Checking if research already exists for {investorDomain}...");
+                bool domainExists = await CheckNotionDomainExists(investorDomain);
+                
+                if (domainExists)
+                {
+                    Console.WriteLine($"✅ Research already exists for {investorDomain} in Notion.");
+                    Console.WriteLine($"ℹ️  Use --force-research flag to create duplicate research anyway:");
+                    Console.WriteLine($"   dotnet run --force-research {investorDomain}");
+                    return;
+                }
+                Console.WriteLine($"✅ No existing research found for {investorDomain}, proceeding...");
+            }
+            else
+            {
+                Console.WriteLine($"⚠️  Force research mode enabled - will create research even if duplicates exist");
+            }
+            
             // Step 1: Validate both systems are accessible BEFORE doing expensive Perplexity call
             Console.WriteLine($"🔍 Validating systems for {investorDomain}...");
 
@@ -1011,6 +1052,58 @@ This is a test entry for TestVC (testvc.vc).
         catch (Exception ex)
         {
             Console.WriteLine($"❌ Error in research-only mode for {investorDomain}: {ex.Message}");
+        }
+    }
+    
+    static async Task<bool> CheckNotionDomainExists(string investorDomain)
+    {
+        string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
+        if (string.IsNullOrEmpty(notionToken))
+        {
+            return false;
+        }
+
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
+            client.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
+
+            try
+            {
+                // Search the Investor Research database for pages with matching domain
+                var searchBody = new
+                {
+                    filter = new
+                    {
+                        property = "Domain",
+                        url = new
+                        {
+                            contains = investorDomain
+                        }
+                    }
+                };
+                
+                string searchJson = System.Text.Json.JsonSerializer.Serialize(searchBody);
+                var searchContent = new StringContent(searchJson, Encoding.UTF8, "application/json");
+                
+                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent);
+                string responseBody = await response.Content.ReadAsStringAsync();
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    JsonNode node = JsonNode.Parse(responseBody);
+                    var results = node?["results"]?.AsArray();
+                    
+                    return results != null && results.Count > 0;
+                }
+                
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error checking Notion database: {ex.Message}");
+                return false;
+            }
         }
     }
     
