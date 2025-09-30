@@ -1,0 +1,7 @@
+# Build outputs
+testnote/bin/
+testnote/obj/
+vcrutils/bin/
+vcrutils/obj/
+vcr/bin/
+vcr/obj/

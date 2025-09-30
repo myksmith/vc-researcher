@@ -5,35 +5,15 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Text.Json.Nodes;
 using System.Text.Json;
+using vcrutils;
 
 class Program
 {
-    // Global constants
-    private const string NOTION_INVESTOR_RESEARCH_DATABASE_ID = "27b6ef03-8cf6-8059-9860-c0ec6873c896";
     // Note: We now update company records directly instead of list-specific records
 
     // Singleton HTTP Clients
-    private static HttpClient? _notionClient;
     private static HttpClient? _attioClient;
     private static HttpClient? _perplexityClient;
-
-    // HTTP Client Helper Methods (Singletons)
-    static HttpClient GetNotionClient()
-    {
-        if (_notionClient == null)
-        {
-            string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
-            if (string.IsNullOrEmpty(notionToken))
-            {
-                throw new InvalidOperationException("NOTION_API_KEY environment variable not set");
-            }
-
-            _notionClient = new HttpClient();
-            _notionClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
-            _notionClient.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
-        }
-        return _notionClient;
-    }
 
     static HttpClient GetAttioClient()
     {
@@ -374,7 +354,7 @@ class Program
     {
         try
         {
-            HttpClient client = GetNotionClient();
+            HttpClient client = NotionHelper.GetNotionClient();
 
             try
             {
@@ -389,7 +369,7 @@ class Program
                 string queryJson = System.Text.Json.JsonSerializer.Serialize(queryBody);
                 var queryContent = new StringContent(queryJson, Encoding.UTF8, "application/json");
                 
-                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", queryContent);
+                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NotionHelper.NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", queryContent);
                 string responseBody = await response.Content.ReadAsStringAsync();
                 
                 if (response.IsSuccessStatusCode)
@@ -625,7 +605,7 @@ class Program
 
         try
         {
-            HttpClient client = GetNotionClient();
+            HttpClient client = NotionHelper.GetNotionClient();
 
             try
             {
@@ -870,11 +850,11 @@ class Program
 
     static async Task<string?> CreateNotionInvestorEntry(string domain, string name, string markdownContent)
     {
-        string databaseId = NOTION_INVESTOR_RESEARCH_DATABASE_ID;
+        string databaseId = NotionHelper.NOTION_INVESTOR_RESEARCH_DATABASE_ID;
 
         try
         {
-            HttpClient client = GetNotionClient();
+            HttpClient client = NotionHelper.GetNotionClient();
             string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
 
             try
@@ -1117,7 +1097,7 @@ This is a test entry for TestVC (testvc.vc).
     {
         try
         {
-            HttpClient client = GetNotionClient();
+            HttpClient client = NotionHelper.GetNotionClient();
 
             try
             {
@@ -1137,7 +1117,7 @@ This is a test entry for TestVC (testvc.vc).
                 string searchJson = System.Text.Json.JsonSerializer.Serialize(searchBody);
                 var searchContent = new StringContent(searchJson, Encoding.UTF8, "application/json");
                 
-                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent);
+                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NotionHelper.NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent);
                 string responseBody = await response.Content.ReadAsStringAsync();
                 
                 if (response.IsSuccessStatusCode)
@@ -1163,11 +1143,11 @@ This is a test entry for TestVC (testvc.vc).
         }
     }
     
-    static async Task<string?> FindExistingNotionResearch(string investorDomain)
+    static async Task<string?> FindExistingNotionPageId(string investorDomain)
     {
         try
         {
-            HttpClient client = GetNotionClient();
+            HttpClient client = NotionHelper.GetNotionClient();
 
             try
             {
@@ -1187,7 +1167,7 @@ This is a test entry for TestVC (testvc.vc).
                 string searchJson = System.Text.Json.JsonSerializer.Serialize(searchBody);
                 var searchContent = new StringContent(searchJson, Encoding.UTF8, "application/json");
 
-                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent);
+                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NotionHelper.NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent);
                 string responseBody = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
@@ -1203,8 +1183,7 @@ This is a test entry for TestVC (testvc.vc).
 
                         if (!string.IsNullOrEmpty(pageId))
                         {
-                            // Return the Notion URL
-                            return $"https://notion.so/{pageId.Replace("-", "")}";
+                            return pageId;
                         }
                     }
                 }
@@ -1224,19 +1203,134 @@ This is a test entry for TestVC (testvc.vc).
         }
     }
 
+    static async Task<string?> FindExistingNotionResearch(string investorDomain)
+    {
+        string? pageId = await FindExistingNotionPageId(investorDomain);
+        if (!string.IsNullOrEmpty(pageId))
+        {
+            return $"https://notion.so/{pageId.Replace("-", "")}";
+        }
+        return null;
+    }
+
+    static async Task<bool> DeleteNotionPage(string pageId)
+    {
+        try
+        {
+            HttpClient client = NotionHelper.GetNotionClient();
+
+            try
+            {
+                Console.WriteLine($"🗑️  Deleting Notion page (ID: {pageId})...");
+
+                // Archive (delete) the page using Notion API
+                var updateBody = new
+                {
+                    archived = true
+                };
+
+                string updateJson = System.Text.Json.JsonSerializer.Serialize(updateBody);
+                var updateContent = new StringContent(updateJson, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response = await client.PatchAsync($"https://api.notion.com/v1/pages/{pageId}", updateContent);
+                string responseBody = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine("✅ Successfully deleted existing Notion page");
+                    return true;
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Failed to delete Notion page: {response.StatusCode}");
+                    Console.WriteLine($"Response: {responseBody}");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error deleting Notion page: {ex.Message}");
+                return false;
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"❌ {ex.Message}");
+            return false;
+        }
+    }
+
     static async Task RegenerateResearch(string investorDomain)
     {
         try
         {
             Console.WriteLine($"🔄 Regenerating research for {investorDomain}...");
 
-            // TODO: Implement the following steps:
-            // 1. Find existing Notion research page by domain
-            // 2. Delete the existing Notion page
-            // 3. Run the full research workflow (Perplexity + create new Notion entry + update Attio)
+            // Step 1: Find existing Notion research page by domain
+            Console.WriteLine($"🔍 Searching for existing research...");
+            string? existingPageId = await FindExistingNotionPageId(investorDomain);
 
-            Console.WriteLine("⚠️  This feature is not yet implemented.");
-            Console.WriteLine("   Coming soon: Will delete existing research and create a fresh analysis.");
+            if (existingPageId == null)
+            {
+                Console.WriteLine($"⚠️  No existing research found for {investorDomain}");
+                Console.WriteLine($"   Use the regular workflow instead: dotnet run {investorDomain}");
+                return;
+            }
+
+            Console.WriteLine($"✅ Found existing research (Page ID: {existingPageId})");
+
+            // Step 2: Delete the existing Notion page
+            bool deleted = await DeleteNotionPage(existingPageId);
+            if (!deleted)
+            {
+                Console.WriteLine($"❌ Failed to delete existing research - aborting regeneration");
+                return;
+            }
+
+            // Step 3: Validate both systems are accessible BEFORE doing expensive Perplexity call
+            Console.WriteLine($"🔍 Validating systems for {investorDomain}...");
+
+            string? notionDbOk = await ValidateNotionDatabase();
+            string attioCompanyId = await FindAttioRecord(investorDomain);
+
+            // Early exit if either system is not available
+            if (notionDbOk == null)
+            {
+                Console.WriteLine($"❌ Could not access Notion Investor Research database");
+                return;
+            }
+
+            if (attioCompanyId == null)
+            {
+                Console.WriteLine($"❌ Could not find Attio company record for {investorDomain}");
+                return;
+            }
+
+            Console.WriteLine("✅ Both Notion database and Attio company record are accessible");
+
+            // Step 4: Get analysis from Perplexity
+            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain);
+            if (perplexityJson == null)
+            {
+                Console.WriteLine("❌ Failed to get analysis from Perplexity");
+                return;
+            }
+            Console.WriteLine("✅ Completed Perplexity analysis");
+
+            // Step 5: Create new Notion research page
+            string? notionPageUrl = await UpdateNotionDatabase("regenerated", investorDomain, perplexityJson);
+            if (notionPageUrl == null)
+            {
+                Console.WriteLine("❌ Failed to create new Notion page - cannot update Attio with URL");
+                return;
+            }
+            Console.WriteLine("✅ Created new Notion research page");
+
+            // Step 6: Update Attio company record with the new Notion URL
+            await UpdateAttioCRM(attioCompanyId, investorDomain, notionPageUrl);
+            Console.WriteLine("✅ Updated Attio company record");
+
+            Console.WriteLine($"🎉 Successfully regenerated research for {investorDomain}");
         }
         catch (Exception ex)
         {
