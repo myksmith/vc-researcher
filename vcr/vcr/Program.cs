@@ -11,6 +11,62 @@ class Program
     // Global constants
     private const string NOTION_INVESTOR_RESEARCH_DATABASE_ID = "27b6ef03-8cf6-8059-9860-c0ec6873c896";
     // Note: We now update company records directly instead of list-specific records
+
+    // Singleton HTTP Clients
+    private static HttpClient? _notionClient;
+    private static HttpClient? _attioClient;
+    private static HttpClient? _perplexityClient;
+
+    // HTTP Client Helper Methods (Singletons)
+    static HttpClient GetNotionClient()
+    {
+        if (_notionClient == null)
+        {
+            string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
+            if (string.IsNullOrEmpty(notionToken))
+            {
+                throw new InvalidOperationException("NOTION_API_KEY environment variable not set");
+            }
+
+            _notionClient = new HttpClient();
+            _notionClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
+            _notionClient.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
+        }
+        return _notionClient;
+    }
+
+    static HttpClient GetAttioClient()
+    {
+        if (_attioClient == null)
+        {
+            string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
+            if (string.IsNullOrEmpty(attioToken))
+            {
+                throw new InvalidOperationException("ATTIO_API_KEY environment variable not set");
+            }
+
+            _attioClient = new HttpClient();
+            _attioClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
+        }
+        return _attioClient;
+    }
+
+    static HttpClient GetPerplexityClient()
+    {
+        if (_perplexityClient == null)
+        {
+            string apiKey = Environment.GetEnvironmentVariable("SONAR_API_KEY");
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                throw new InvalidOperationException("SONAR_API_KEY environment variable not set");
+            }
+
+            _perplexityClient = new HttpClient();
+            _perplexityClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+        }
+        return _perplexityClient;
+    }
+
     static async Task Main(string[] args)
     {
         // Environment variable validation - check all required API keys
@@ -220,7 +276,6 @@ class Program
     static async Task<JsonNode?> QueryPerplexityForVCAnalysis(string investorDomain)
     {
         string apiUrl = "https://api.perplexity.ai/chat/completions";
-        string apiKey = Environment.GetEnvironmentVariable("SONAR_API_KEY");
 
         // Read the investor criteria file
         string criteriaFilePath = "Neo_Investor_Search_Criteria.md";
@@ -245,9 +300,9 @@ class Program
             investorCriteria = "general venture capital investment criteria";
         }
 
-        using (HttpClient client = new HttpClient())
+        try
         {
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+            HttpClient client = GetPerplexityClient();
 
             var requestBody = new
             {
@@ -292,21 +347,18 @@ class Program
                 throw new Exception($"Perplexity API error: {ex.Message}");
             }
         }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"❌ {ex.Message}");
+            return null;
+        }
     }
 
     static async Task<string?> ValidateNotionDatabase()
     {
-        string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
-        if (string.IsNullOrEmpty(notionToken))
+        try
         {
-            Console.WriteLine("❌ NOTION_API_KEY not set, cannot validate Notion database");
-            return null;
-        }
-
-        using (HttpClient client = new HttpClient())
-        {
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
-            client.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
+            HttpClient client = GetNotionClient();
 
             try
             {
@@ -341,6 +393,11 @@ class Program
                 Console.WriteLine($"❌ Error validating Notion database: {ex.Message}");
                 return null;
             }
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"❌ {ex.Message}");
+            return null;
         }
     }
 
@@ -402,16 +459,15 @@ class Program
     // Wrapper for main workflow validation
     static async Task<string> FindAttioRecord(string investorDomain)
     {
-        string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
-        if (string.IsNullOrEmpty(attioToken))
+        try
         {
-            return null;
-        }
-
-        using (HttpClient client = new HttpClient())
-        {
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
+            HttpClient client = GetAttioClient();
             return await FindAttioRecord(client, investorDomain);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"❌ {ex.Message}");
+            return null;
         }
     }
 
@@ -458,16 +514,9 @@ class Program
 
     static async Task UpdateAttioCRM(string recordId, string investorDomain, string notionUrl)
     {
-        string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
-        if (string.IsNullOrEmpty(attioToken))
+        try
         {
-            Console.WriteLine("❌ ATTIO_API_KEY not set, cannot update Attio records");
-            return;
-        }
-
-        using (HttpClient client = new HttpClient())
-        {
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
+            HttpClient client = GetAttioClient();
 
             try
             {
@@ -498,6 +547,10 @@ class Program
             {
                 Console.WriteLine($"❌ Error updating Attio records: {ex.Message}");
             }
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"❌ {ex.Message}");
         }
     }
     
@@ -553,18 +606,10 @@ class Program
     static async Task TestNotionConnection()
     {
         Console.WriteLine("🧪 Testing Notion API connection...");
-        
-        string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
-        if (string.IsNullOrEmpty(notionToken))
-        {
-            Console.WriteLine("❌ NOTION_API_KEY environment variable not set");
-            return;
-        }
 
-        using (HttpClient client = new HttpClient())
+        try
         {
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
-            client.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
+            HttpClient client = GetNotionClient();
 
             try
             {
@@ -626,22 +671,19 @@ class Program
                 Console.WriteLine($"❌ Notion API connection failed: {ex.Message}");
             }
         }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"❌ {ex.Message}");
+        }
     }
 
     static async Task PingAttio()
     {
         Console.WriteLine("🏓 Pinging Attio API...");
-        
-        string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
-        if (string.IsNullOrEmpty(attioToken))
-        {
-            Console.WriteLine("❌ ATTIO_API_KEY environment variable not set");
-            return;
-        }
 
-        using (HttpClient client = new HttpClient())
+        try
         {
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
+            HttpClient client = GetAttioClient();
 
             try
             {
@@ -666,6 +708,10 @@ class Program
                 Console.WriteLine($"❌ Attio API ping failed: {ex.Message}");
             }
         }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"❌ {ex.Message}");
+        }
     }
 
     // Note: FindAttioBothLists function removed since we now work with company records directly
@@ -673,17 +719,10 @@ class Program
     static async Task TestAttioList()
     {
         Console.WriteLine("📝 Testing Attio database lookup for both target lists...");
-        
-        string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
-        if (string.IsNullOrEmpty(attioToken))
-        {
-            Console.WriteLine("❌ ATTIO_API_KEY environment variable not set");
-            return;
-        }
 
-        using (HttpClient client = new HttpClient())
+        try
         {
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
+            HttpClient client = GetAttioClient();
 
             try
             {
@@ -807,22 +846,20 @@ class Program
                 Console.WriteLine($"❌ Attio list test failed: {ex.Message}");
             }
         }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"❌ {ex.Message}");
+        }
     }
 
     static async Task<string?> CreateNotionInvestorEntry(string domain, string name, string markdownContent)
     {
-        string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
-        if (string.IsNullOrEmpty(notionToken))
-        {
-            return null;
-        }
-
         string databaseId = NOTION_INVESTOR_RESEARCH_DATABASE_ID;
 
-        using (HttpClient client = new HttpClient())
+        try
         {
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
-            client.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
+            HttpClient client = GetNotionClient();
+            string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
 
             try
             {
@@ -927,6 +964,11 @@ class Program
                 Console.WriteLine($"Error in CreateNotionInvestorEntry: {ex.Message}");
                 return null; // Failed
             }
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"❌ {ex.Message}");
+            return null;
         }
     }
 
@@ -1057,16 +1099,9 @@ This is a test entry for TestVC (testvc.vc).
     
     static async Task<bool> CheckNotionDomainExists(string investorDomain)
     {
-        string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
-        if (string.IsNullOrEmpty(notionToken))
+        try
         {
-            return false;
-        }
-
-        using (HttpClient client = new HttpClient())
-        {
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
-            client.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
+            HttpClient client = GetNotionClient();
 
             try
             {
@@ -1105,20 +1140,18 @@ This is a test entry for TestVC (testvc.vc).
                 return false;
             }
         }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"❌ {ex.Message}");
+            return false;
+        }
     }
     
     static async Task<string?> FindExistingNotionResearch(string investorDomain)
     {
-        string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
-        if (string.IsNullOrEmpty(notionToken))
+        try
         {
-            return null;
-        }
-
-        using (HttpClient client = new HttpClient())
-        {
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
-            client.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
+            HttpClient client = GetNotionClient();
 
             try
             {
@@ -1167,6 +1200,11 @@ This is a test entry for TestVC (testvc.vc).
                 Console.WriteLine($"Error searching Notion database: {ex.Message}");
                 return null;
             }
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"❌ {ex.Message}");
+            return null;
         }
     }
 }
