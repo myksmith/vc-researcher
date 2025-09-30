@@ -377,7 +377,12 @@ class Program
     static string RenderPerplexityJsonToNotion(JsonNode perplexityJson)
     {
         // Extract the chat content from the JSON response
-        return perplexityJson["choices"][0]["message"]["content"].ToString();
+        string content = perplexityJson["choices"][0]["message"]["content"].ToString();
+        
+        // Escape dollar signs to prevent them from being interpreted as LaTeX math or other special formatting in Notion
+        string escapedContent = content.Replace("$", "\\$");
+        
+        return escapedContent;
     }
     
     static async Task<string?> UpdateNotionDatabase(string recordId, string investorDomain, JsonNode perplexityJson)
