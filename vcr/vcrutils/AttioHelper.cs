@@ -16,24 +16,10 @@ namespace vcrutils
 
     public static class AttioHelper
     {
-        // Singleton HTTP Client
-        private static HttpClient? _attioClient;
-
-        // HTTP Client Helper Method (Singleton)
+        // HTTP Client Helper Method
         public static HttpClient GetAttioClient()
         {
-            if (_attioClient == null)
-            {
-                string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
-                if (string.IsNullOrEmpty(attioToken))
-                {
-                    throw new InvalidOperationException("ATTIO_API_KEY environment variable not set");
-                }
-
-                _attioClient = new HttpClient();
-                _attioClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
-            }
-            return _attioClient;
+            return HttpClientFactory.CreateAttioClient();
         }
 
         public static async Task<string?> FindAttioRecord(HttpClient client, string investorDomain)
