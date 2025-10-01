@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using Markdig;
 
 namespace vcrutils
 {
@@ -55,12 +56,15 @@ namespace vcrutils
                         return false;
                     }
 
+                    // Convert markdown to HTML using Markdig
+                    string htmlContent = Markdown.ToHtml(markdownContent);
+
                     // Set up the Mark2Notion API request
                     mark2NotionClient.DefaultRequestHeaders.Add("x-api-key", mark2NotionApiKey);
 
                     var mark2NotionRequestBody = new
                     {
-                        markdown = markdownContent,
+                        markdown = htmlContent,
                         notionToken = notionToken,
                         pageId = pageId
                     };
