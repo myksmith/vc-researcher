@@ -16,10 +16,17 @@ namespace vcrutils
 
     public static class AttioHelper
     {
+        // Singleton HTTP Client
+        private static HttpClient? _attioClient;
+
         // HTTP Client Helper Method
         public static HttpClient GetAttioClient()
         {
-            return HttpClientFactory.CreateAttioClient();
+            if (_attioClient == null)
+            {
+                _attioClient = HttpClientFactory.CreateAttioClient();
+            }
+            return _attioClient;
         }
 
         public static async Task<string?> FindAttioRecord(HttpClient client, string investorDomain)

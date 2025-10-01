@@ -13,10 +13,17 @@ namespace vcrutils
         // Global constants
         public const string NOTION_INVESTOR_RESEARCH_DATABASE_ID = "27b6ef03-8cf6-8059-9860-c0ec6873c896";
 
+        // Singleton HTTP Client
+        private static HttpClient? _notionClient;
+
         // HTTP Client Helper Method
         public static HttpClient GetNotionClient()
         {
-            return HttpClientFactory.CreateNotionClient();
+            if (_notionClient == null)
+            {
+                _notionClient = HttpClientFactory.CreateNotionClient();
+            }
+            return _notionClient;
         }
 
         /// <summary>
