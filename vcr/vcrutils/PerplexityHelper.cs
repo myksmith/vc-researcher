@@ -36,8 +36,8 @@ namespace vcrutils
         {
             try
             {
-                var citations = perplexityJson["citations"]?.AsArray();
-                var searchResults = perplexityJson["search_results"]?.AsArray();
+                var citations = JsonParser.GetArray(perplexityJson, "citations");
+                var searchResults = JsonParser.GetArray(perplexityJson, "search_results");
 
                 if ((citations == null || citations.Count == 0) && (searchResults == null || searchResults.Count == 0))
                 {
@@ -53,10 +53,10 @@ namespace vcrutils
                     int index = 1;
                     foreach (var result in searchResults)
                     {
-                        string? title = result?["title"]?.ToString();
-                        string? url = result?["url"]?.ToString();
-                        string? date = result?["date"]?.ToString();
-                        string? snippet = result?["snippet"]?.ToString();
+                        string? title = JsonParser.GetString(result, "title");
+                        string? url = JsonParser.GetString(result, "url");
+                        string? date = JsonParser.GetString(result, "date");
+                        string? snippet = JsonParser.GetString(result, "snippet");
 
                         if (!string.IsNullOrEmpty(url))
                         {

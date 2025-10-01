@@ -76,7 +76,7 @@ namespace vcrutils
                     {
                         // Parse the Mark2Notion response
                         JsonNode mark2NotionNode = JsonNode.Parse(mark2NotionResponseBody);
-                        string status = mark2NotionNode?["status"]?.ToString() ?? "unknown";
+                        string status = JsonParser.GetString(mark2NotionNode, "status", "unknown");
 
                         if (status == "success")
                         {
@@ -161,7 +161,7 @@ namespace vcrutils
                     {
                         // Parse response to get the page ID
                         JsonNode createNode = JsonNode.Parse(createResponseBody);
-                        string? pageId = createNode?["id"]?.ToString();
+                        string? pageId = JsonParser.GetString(createNode, "id");
 
                         if (!string.IsNullOrEmpty(pageId))
                         {
@@ -218,7 +218,7 @@ namespace vcrutils
                     if (response.IsSuccessStatusCode)
                     {
                         JsonNode node = JsonNode.Parse(responseBody);
-                        var results = node?["results"]?.AsArray();
+                        var results = JsonParser.GetArray(node, "results");
 
                         return results != null && results.Count > 0;
                     }
@@ -268,13 +268,13 @@ namespace vcrutils
                     if (response.IsSuccessStatusCode)
                     {
                         JsonNode node = JsonNode.Parse(responseBody);
-                        var results = node?["results"]?.AsArray();
+                        var results = JsonParser.GetArray(node, "results");
 
                         if (results != null && results.Count > 0)
                         {
                             // Get the first matching page
                             var firstResult = results[0];
-                            string? pageId = firstResult?["id"]?.ToString();
+                            string? pageId = JsonParser.GetString(firstResult, "id");
 
                             if (!string.IsNullOrEmpty(pageId))
                             {
