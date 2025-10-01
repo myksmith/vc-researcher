@@ -275,7 +275,7 @@ This is a test entry for TestVC (testvc.vc).
 **Overall: Good test case for API integration.**";
 
             Console.WriteLine($"Creating entry for {testName} ({testDomain})...");
-            string? pageId = await Program.CreateNotionInvestorEntry(testDomain, testName, testMarkdown);
+            string? pageId = await NotionHelper.CreateNotionInvestorEntry(testDomain, testName, testMarkdown);
 
             if (pageId != null)
             {

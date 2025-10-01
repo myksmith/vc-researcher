@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -31,6 +32,160 @@ namespace vcrutils
                 _notionClient.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
             }
             return _notionClient;
+        }
+
+        /// <summary>
+        /// Appends markdown content to a Notion page using the Mark2Notion API
+        /// </summary>
+        /// <param name="pageId">The Notion page ID to append content to</param>
+        /// <param name="markdownContent">The markdown content to append</param>
+        /// <param name="notionToken">The Notion API token</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public static async Task<bool> AppendMarkdownToNotionPage(string pageId, string markdownContent, string notionToken)
+        {
+            try
+            {
+                using (HttpClient mark2NotionClient = new HttpClient())
+                {
+                    // Get Mark2Notion API key from environment variable
+                    string mark2NotionApiKey = Environment.GetEnvironmentVariable("MARK2NOTION_API_KEY");
+                    if (string.IsNullOrEmpty(mark2NotionApiKey))
+                    {
+                        Console.WriteLine("MARK2NOTION_API_KEY environment variable not set");
+                        return false;
+                    }
+
+                    // Set up the Mark2Notion API request
+                    mark2NotionClient.DefaultRequestHeaders.Add("x-api-key", mark2NotionApiKey);
+
+                    var mark2NotionRequestBody = new
+                    {
+                        markdown = markdownContent,
+                        notionToken = notionToken,
+                        pageId = pageId
+                    };
+
+                    string mark2NotionJson = JsonSerializer.Serialize(mark2NotionRequestBody);
+                    var mark2NotionContent = new StringContent(mark2NotionJson, Encoding.UTF8, "application/json");
+
+                    // Call the Mark2Notion append API
+                    HttpResponseMessage mark2NotionResponse = await mark2NotionClient.PostAsync("https://api.mark2notion.com/api/append", mark2NotionContent);
+                    string mark2NotionResponseBody = await mark2NotionResponse.Content.ReadAsStringAsync();
+
+                    if (mark2NotionResponse.IsSuccessStatusCode)
+                    {
+                        // Parse the Mark2Notion response
+                        JsonNode mark2NotionNode = JsonNode.Parse(mark2NotionResponseBody);
+                        string status = mark2NotionNode?["status"]?.ToString() ?? "unknown";
+
+                        if (status == "success")
+                        {
+                            return true;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Mark2Notion API returned status: {status}");
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Mark2Notion API error: {mark2NotionResponse.StatusCode}");
+                        Console.WriteLine($"Response: {mark2NotionResponseBody}");
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error appending markdown to Notion page: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Creates a new Notion investor entry with domain, name, and markdown content
+        /// </summary>
+        /// <param name="domain">The investor domain</param>
+        /// <param name="name">The investor name</param>
+        /// <param name="markdownContent">The markdown content for the page</param>
+        /// <returns>The page ID if successful, null otherwise</returns>
+        public static async Task<string?> CreateNotionInvestorEntry(string domain, string name, string markdownContent)
+        {
+            string databaseId = NOTION_INVESTOR_RESEARCH_DATABASE_ID;
+
+            try
+            {
+                HttpClient client = GetNotionClient();
+                string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
+
+                if (string.IsNullOrEmpty(notionToken))
+                {
+                    Console.WriteLine("NOTION_API_KEY environment variable not set");
+                    return null;
+                }
+
+                try
+                {
+                    // Step 1: Create database entry with basic fields
+                    var createPageBody = new
+                    {
+                        parent = new { database_id = databaseId },
+                        properties = new Dictionary<string, object>
+                        {
+                            ["Domain"] = new
+                            {
+                                url = domain.StartsWith("http") ? domain : $"https://{domain}"
+                            },
+                            ["Investor Name"] = new
+                            {
+                                title = new object[]
+                                {
+                                    new
+                                    {
+                                        type = "text",
+                                        text = new { content = name }
+                                    }
+                                }
+                            }
+                        }
+                    };
+
+                    string createJson = JsonSerializer.Serialize(createPageBody);
+                    var createContent = new StringContent(createJson, Encoding.UTF8, "application/json");
+
+                    HttpResponseMessage createResponse = await client.PostAsync("https://api.notion.com/v1/pages", createContent);
+                    string createResponseBody = await createResponse.Content.ReadAsStringAsync();
+
+                    if (createResponse.IsSuccessStatusCode)
+                    {
+                        // Parse response to get the page ID
+                        JsonNode createNode = JsonNode.Parse(createResponseBody);
+                        string? pageId = createNode?["id"]?.ToString();
+
+                        if (!string.IsNullOrEmpty(pageId))
+                        {
+                            // Step 2: Add markdown content to the page using Mark2Notion API
+                            bool success = await AppendMarkdownToNotionPage(pageId, markdownContent, notionToken);
+                            if (success)
+                            {
+                                return pageId;
+                            }
+                        }
+                    }
+                    return null; // Failed
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error in CreateNotionInvestorEntry: {ex.Message}");
+                    return null; // Failed
+                }
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.WriteLine($"❌ {ex.Message}");
+                return null;
+            }
         }
 
         public static async Task<bool> CheckNotionDomainExists(string investorDomain)
