@@ -373,8 +373,18 @@ namespace VCR
         // Extract the chat content from the JSON response
         string content = perplexityJson["choices"][0]["message"]["content"].ToString();
 
+        // Extract sources from the JSON response
+        string sources = PerplexityHelper.ExtractSourcesAsMarkdown(perplexityJson);
+
+        // Combine content and sources
+        string fullContent = content;
+        if (!string.IsNullOrEmpty(sources))
+        {
+            fullContent += "\n\n" + sources;
+        }
+
         // Escape dollar signs to prevent them from being interpreted as LaTeX math or other special formatting in Notion
-        string escapedContent = content.Replace("$", "\\$");
+        string escapedContent = fullContent.Replace("$", "\\$");
 
         return escapedContent;
     }
@@ -385,6 +395,11 @@ namespace VCR
         string perplexityMarkdown = RenderPerplexityJsonToMarkdown(perplexityJson);
         // Remove the dollar sign escaping since Attio doesn't need it
         string attioMarkdown = perplexityMarkdown.Replace("\\$", "$");
+
+        // Debug: Dump the markdown to console
+        Console.WriteLine("========== MARKDOWN OUTPUT START ==========");
+        Console.WriteLine(attioMarkdown);
+        Console.WriteLine("========== MARKDOWN OUTPUT END ==========");
 
         Console.WriteLine("📝 Adding Perplexity research note to Attio...");
         bool noteCreated = await AttioHelper.CreateAttioNote(attioCompanyId, "Perplexity Research", attioMarkdown, NoteFormat.Markdown);
