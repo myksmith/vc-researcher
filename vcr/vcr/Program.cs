@@ -79,25 +79,25 @@ namespace VCR
         // Handle test commands
         if (args[0] == "--test-notion")
         {
-            await TestCommands.TestNotionConnection();
+            await TestCommands.TestNotionConnection().ConfigureAwait(false);
             return;
         }
 
         if (args[0] == "--test-notion-insert")
         {
-            await TestCommands.TestNotionInsert();
+            await TestCommands.TestNotionInsert().ConfigureAwait(false);
             return;
         }
 
         if (args[0] == "--ping-attio")
         {
-            await TestCommands.PingAttio();
+            await TestCommands.PingAttio().ConfigureAwait(false);
             return;
         }
 
         if (args[0] == "--test-attio-list")
         {
-            await TestCommands.TestAttioList();
+            await TestCommands.TestAttioList().ConfigureAwait(false);
             return;
         }
         
@@ -111,7 +111,7 @@ namespace VCR
             }
             
             string domain = args[1];
-            await FixAttioLinks(domain);
+            await FixAttioLinks(domain).ConfigureAwait(false);
             return;
         }
         
@@ -125,7 +125,7 @@ namespace VCR
             }
 
             string domain = args[1];
-            await ResearchOnlyNoLinks(domain);
+            await ResearchOnlyNoLinks(domain).ConfigureAwait(false);
             return;
         }
 
@@ -139,7 +139,7 @@ namespace VCR
             }
 
             string domain = args[1];
-            await RegenerateResearch(domain);
+            await RegenerateResearch(domain).ConfigureAwait(false);
             return;
         }
 
@@ -169,7 +169,7 @@ namespace VCR
             if (!forceResearch)
             {
                 Console.WriteLine($"🔍 Checking if research already exists for {investorDomain}...");
-                bool domainExists = await NotionHelper.CheckNotionDomainExists(investorDomain);
+                bool domainExists = await NotionHelper.CheckNotionDomainExists(investorDomain).ConfigureAwait(false);
                 
                 if (domainExists)
                 {
@@ -188,8 +188,8 @@ namespace VCR
             // Step 1: Validate both systems are accessible BEFORE doing expensive Perplexity call
             Console.WriteLine($"🔍 Validating systems for {investorDomain}...");
 
-            string? notionDbOk = await ValidateNotionDatabase();
-            string attioCompanyId = await AttioHelper.FindAttioRecord(investorDomain);
+            string? notionDbOk = await ValidateNotionDatabase().ConfigureAwait(false);
+            string attioCompanyId = await AttioHelper.FindAttioRecord(investorDomain).ConfigureAwait(false);
 
             // Early exit if either system is not available
             if (notionDbOk == null)
@@ -207,7 +207,7 @@ namespace VCR
             Console.WriteLine("✅ Both Notion database and Attio company record are accessible");
 
             // Step 2: Get analysis from Perplexity (only after confirming records exist)
-            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain);
+            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain).ConfigureAwait(false);
             if (perplexityJson == null)
             {
                 Console.WriteLine("❌ Failed to get analysis from Perplexity");
@@ -216,7 +216,7 @@ namespace VCR
             Console.WriteLine("✅ Completed Perplexity analysis");
 
             // Step 3: Create Notion research page
-            string? notionPageUrl = await UpdateNotionDatabase("validated", investorDomain, perplexityJson);
+            string? notionPageUrl = await UpdateNotionDatabase("validated", investorDomain, perplexityJson).ConfigureAwait(false);
             if (notionPageUrl == null)
             {
                 Console.WriteLine("❌ Failed to create Notion page - cannot update Attio with URL");
@@ -225,11 +225,11 @@ namespace VCR
             Console.WriteLine("✅ Created Notion research page");
 
             // Step 4: Update Attio company record with the Notion URL
-            await UpdateAttioCRM(attioCompanyId, investorDomain, notionPageUrl);
+            await UpdateAttioCRM(attioCompanyId, investorDomain, notionPageUrl).ConfigureAwait(false);
             Console.WriteLine("✅ Updated Attio company record");
 
             // Step 5: Add Perplexity research as a note to the Attio company record
-            await AddNoteToAttioRecord(attioCompanyId, perplexityJson);
+            await AddNoteToAttioRecord(attioCompanyId, perplexityJson).ConfigureAwait(false);
 
             Console.WriteLine($"🎉 Successfully processed {investorDomain}");
         }
@@ -251,7 +251,7 @@ namespace VCR
         {
             if (File.Exists(criteriaFilePath))
             {
-                investorCriteria = await File.ReadAllTextAsync(criteriaFilePath);
+                investorCriteria = await File.ReadAllTextAsync(criteriaFilePath).ConfigureAwait(false);
                 Console.WriteLine($"Loaded investor criteria from {criteriaFilePath}");
             }
             else
@@ -299,10 +299,10 @@ namespace VCR
 
             try
             {
-                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+                HttpResponseMessage response = await client.PostAsync(apiUrl, content).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
-                string responseBody = await response.Content.ReadAsStringAsync();
+                string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 Console.WriteLine("Response: " + responseBody);
 
                 JsonNode node = JsonNode.Parse(responseBody);
@@ -339,8 +339,8 @@ namespace VCR
                 string queryJson = System.Text.Json.JsonSerializer.Serialize(queryBody);
                 var queryContent = new StringContent(queryJson, Encoding.UTF8, "application/json");
                 
-                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NotionHelper.NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", queryContent);
-                string responseBody = await response.Content.ReadAsStringAsync();
+                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NotionHelper.NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", queryContent).ConfigureAwait(false);
+                string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -402,7 +402,7 @@ namespace VCR
         Console.WriteLine("========== MARKDOWN OUTPUT END ==========");
 
         Console.WriteLine("📝 Adding Perplexity research note to Attio...");
-        bool noteCreated = await AttioHelper.CreateAttioNote(attioCompanyId, "Perplexity Research", attioMarkdown, NoteFormat.Markdown);
+        bool noteCreated = await AttioHelper.CreateAttioNote(attioCompanyId, "Perplexity Research", attioMarkdown, NoteFormat.Markdown).ConfigureAwait(false);
 
         if (noteCreated)
         {
@@ -429,7 +429,7 @@ namespace VCR
             vcName = char.ToUpper(vcName[0]) + vcName.Substring(1);
         }
         
-        string? pageId = await NotionHelper.CreateNotionInvestorEntry(investorDomain, vcName, analysis);
+        string? pageId = await NotionHelper.CreateNotionInvestorEntry(investorDomain, vcName, analysis).ConfigureAwait(false);
         
         if (pageId != null)
         {
@@ -455,7 +455,7 @@ namespace VCR
                 Console.WriteLine($"🔍 Searching for {investorDomain} in Attio company records...");
                 
                 // Step 1: Find the company record by searching
-                string? companyRecordId = await AttioHelper.FindAttioRecord(client, investorDomain);
+                string? companyRecordId = await AttioHelper.FindAttioRecord(client, investorDomain).ConfigureAwait(false);
 
                 if (companyRecordId == null)
                 {
@@ -464,7 +464,7 @@ namespace VCR
                 }
 
                 // Step 2: Update the company record with the found record ID
-                bool updated = await AttioHelper.UpdateAttioCompanyRecord(client, companyRecordId, notionUrl);
+                bool updated = await AttioHelper.UpdateAttioCompanyRecord(client, companyRecordId, notionUrl).ConfigureAwait(false);
                 
                 if (updated)
                 {
@@ -523,7 +523,7 @@ namespace VCR
             
             // Step 1: Look up existing Notion research page
             Console.WriteLine($"🔍 Looking up existing Notion research for {investorDomain}...");
-            string? notionUrl = await FindExistingNotionResearch(investorDomain);
+            string? notionUrl = await FindExistingNotionResearch(investorDomain).ConfigureAwait(false);
             
             if (notionUrl == null)
             {
@@ -536,7 +536,7 @@ namespace VCR
             
             // Step 2: Update Attio records with the URL (skip Perplexity and Notion creation)
             Console.WriteLine($"🔄 Updating Attio database links...");
-            await UpdateAttioCRM("fix-links-mode", investorDomain, notionUrl);
+            await UpdateAttioCRM("fix-links-mode", investorDomain, notionUrl).ConfigureAwait(false);
             
             Console.WriteLine($"🎉 Successfully updated Attio links for {investorDomain}!");
         }
@@ -554,7 +554,7 @@ namespace VCR
             
             // Step 1: Get analysis from Perplexity
             Console.WriteLine($"🧠 Querying Perplexity for VC analysis...");
-            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain);
+            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain).ConfigureAwait(false);
             if (perplexityJson == null)
             {
                 Console.WriteLine("❌ Failed to get analysis from Perplexity");
@@ -564,7 +564,7 @@ namespace VCR
             
             // Step 2: Create Notion research entry
             Console.WriteLine($"📝 Creating Notion research entry...");
-            string? notionUrl = await UpdateNotionDatabase("research-only-mode", investorDomain, perplexityJson);
+            string? notionUrl = await UpdateNotionDatabase("research-only-mode", investorDomain, perplexityJson).ConfigureAwait(false);
             
             if (notionUrl != null)
             {
@@ -586,7 +586,7 @@ namespace VCR
 
     static async Task<string?> FindExistingNotionResearch(string investorDomain)
     {
-        string? pageId = await NotionHelper.FindExistingNotionPageId(investorDomain);
+        string? pageId = await NotionHelper.FindExistingNotionPageId(investorDomain).ConfigureAwait(false);
         if (!string.IsNullOrEmpty(pageId))
         {
             return $"https://notion.so/{pageId.Replace("-", "")}";
@@ -602,7 +602,7 @@ namespace VCR
 
             // Step 1: Find existing Notion research page by domain
             Console.WriteLine($"🔍 Searching for existing research...");
-            string? existingPageId = await NotionHelper.FindExistingNotionPageId(investorDomain);
+            string? existingPageId = await NotionHelper.FindExistingNotionPageId(investorDomain).ConfigureAwait(false);
 
             if (existingPageId == null)
             {
@@ -614,7 +614,7 @@ namespace VCR
             Console.WriteLine($"✅ Found existing research (Page ID: {existingPageId})");
 
             // Step 2: Delete the existing Notion page
-            bool deleted = await NotionHelper.DeleteNotionPage(existingPageId);
+            bool deleted = await NotionHelper.DeleteNotionPage(existingPageId).ConfigureAwait(false);
             if (!deleted)
             {
                 Console.WriteLine($"❌ Failed to delete existing research - aborting regeneration");
@@ -624,8 +624,8 @@ namespace VCR
             // Step 3: Validate both systems are accessible BEFORE doing expensive Perplexity call
             Console.WriteLine($"🔍 Validating systems for {investorDomain}...");
 
-            string? notionDbOk = await ValidateNotionDatabase();
-            string attioCompanyId = await AttioHelper.FindAttioRecord(investorDomain);
+            string? notionDbOk = await ValidateNotionDatabase().ConfigureAwait(false);
+            string attioCompanyId = await AttioHelper.FindAttioRecord(investorDomain).ConfigureAwait(false);
 
             // Early exit if either system is not available
             if (notionDbOk == null)
@@ -643,7 +643,7 @@ namespace VCR
             Console.WriteLine("✅ Both Notion database and Attio company record are accessible");
 
             // Step 4: Get analysis from Perplexity
-            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain);
+            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain).ConfigureAwait(false);
             if (perplexityJson == null)
             {
                 Console.WriteLine("❌ Failed to get analysis from Perplexity");
@@ -652,7 +652,7 @@ namespace VCR
             Console.WriteLine("✅ Completed Perplexity analysis");
 
             // Step 5: Create new Notion research page
-            string? notionPageUrl = await UpdateNotionDatabase("regenerated", investorDomain, perplexityJson);
+            string? notionPageUrl = await UpdateNotionDatabase("regenerated", investorDomain, perplexityJson).ConfigureAwait(false);
             if (notionPageUrl == null)
             {
                 Console.WriteLine("❌ Failed to create new Notion page - cannot update Attio with URL");
@@ -661,11 +661,11 @@ namespace VCR
             Console.WriteLine("✅ Created new Notion research page");
 
             // Step 6: Update Attio company record with the new Notion URL
-            await UpdateAttioCRM(attioCompanyId, investorDomain, notionPageUrl);
+            await UpdateAttioCRM(attioCompanyId, investorDomain, notionPageUrl).ConfigureAwait(false);
             Console.WriteLine("✅ Updated Attio company record");
 
             // Step 7: Add Perplexity research as a note to the Attio company record
-            await AddNoteToAttioRecord(attioCompanyId, perplexityJson);
+            await AddNoteToAttioRecord(attioCompanyId, perplexityJson).ConfigureAwait(false);
 
             Console.WriteLine($"🎉 Successfully regenerated research for {investorDomain}");
         }

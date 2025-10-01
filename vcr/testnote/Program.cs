@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -29,7 +29,7 @@ class Program
                 return;
             }
 
-            await TestSourcesExtraction(args[1]);
+            await TestSourcesExtraction(args[1]).ConfigureAwait(false);
             return;
         }
 
@@ -49,7 +49,7 @@ class Program
         {
             // Step 1: Find the company record in Attio
             Console.WriteLine($"🔍 Looking up company record for {domain}...");
-            string? recordId = await AttioHelper.FindAttioRecord(domain);
+            string? recordId = await AttioHelper.FindAttioRecord(domain).ConfigureAwait(false);
 
             if (recordId == null)
             {
@@ -61,7 +61,7 @@ class Program
 
             // Step 2: Create a note attached to the record
             Console.WriteLine($"📝 Creating note '{noteTitle}'...");
-            bool success = await AttioHelper.CreateAttioNote(recordId, noteTitle, noteContent, NoteFormat.Plaintext);
+            bool success = await AttioHelper.CreateAttioNote(recordId, noteTitle, noteContent, NoteFormat.Plaintext).ConfigureAwait(false);
 
             if (success)
             {
@@ -90,7 +90,7 @@ class Program
                 return;
             }
 
-            string jsonContent = await File.ReadAllTextAsync(jsonFilePath);
+            string jsonContent = await File.ReadAllTextAsync(jsonFilePath).ConfigureAwait(false);
             JsonNode? perplexityJson = JsonNode.Parse(jsonContent);
 
             if (perplexityJson == null)
