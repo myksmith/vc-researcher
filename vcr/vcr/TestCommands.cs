@@ -8,8 +8,14 @@ using vcrutils;
 
 namespace VCR
 {
+    /// <summary>
+    /// Provides test commands for verifying API connections and operations with Notion and Attio.
+    /// </summary>
     public static class TestCommands
     {
+        /// <summary>
+        /// Tests the connection to the Notion API by searching for the 'Investor Research' database.
+        /// </summary>
         public static async Task TestNotionConnection()
         {
             Console.WriteLine("🧪 Testing Notion API connection...");
@@ -84,6 +90,9 @@ namespace VCR
             }
         }
 
+        /// <summary>
+        /// Pings the Attio API to verify connectivity.
+        /// </summary>
         public static async Task PingAttio()
         {
             Console.WriteLine("🏓 Pinging Attio API...");
@@ -121,6 +130,9 @@ namespace VCR
             }
         }
 
+        /// <summary>
+        /// Tests the Attio database lookup for specific target lists.
+        /// </summary>
         public static async Task TestAttioList()
         {
             Console.WriteLine("📝 Testing Attio database lookup for both target lists...");
@@ -257,6 +269,9 @@ namespace VCR
             }
         }
 
+        /// <summary>
+        /// Tests the creation of a Notion database entry with markdown content.
+        /// </summary>
         public static async Task TestNotionInsert()
         {
             Console.WriteLine("📝 Testing Notion database entry creation with markdown content...");
