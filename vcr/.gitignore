@@ -3,5 +3,7 @@ testnote/bin/
 testnote/obj/
 vcrutils/bin/
 vcrutils/obj/
+vcrutils.Tests/bin/
+vcrutils.Tests/obj/
 vcr/bin/
 vcr/obj/

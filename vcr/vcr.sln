@@ -1,7 +1,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vcr", "vcr\vcr.csproj", "{321572A3-AEEB-4B0F-8ADF-F30640656DAA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vcrutils.Tests", "vcr\vcrutils.Tests\vcrutils.Tests.csproj", "{D4E8F3A1-5B6D-4F3A-9A1B-2F3E4B6A9C1D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vcrutils.Tests", "vcrutils.Tests\vcrutils.Tests.csproj", "{D4E8F3A1-5B6D-4F3A-9A1B-2F3E4B6A9C1D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
