@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Text.Json.Nodes;
 using System.Text.Json;
 using vcrutils;
+using Markdig;
 
 namespace VCR
 {
@@ -386,7 +387,10 @@ namespace VCR
         // Escape dollar signs to prevent them from being interpreted as LaTeX math or other special formatting in Notion
         string escapedContent = fullContent.Replace("$", "\\$");
 
-        return escapedContent;
+        // Use Markdig to convert markdown to HTML
+        string htmlContent = Markdown.ToHtml(escapedContent);
+
+        return htmlContent;
     }
 
     static async Task AddNoteToAttioRecord(string attioCompanyId, JsonNode perplexityJson)
