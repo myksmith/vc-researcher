@@ -5,12 +5,19 @@ using System.Text.Json.Nodes;
 
 namespace vcrutils
 {
+    /// <summary>
+    /// Provides helper methods for interacting with the Perplexity API.
+    /// </summary>
     public static class PerplexityHelper
     {
         // Singleton HTTP Client
         private static HttpClient? _perplexityClient;
 
-        // HTTP Client Helper Method (Singleton)
+        /// <summary>
+        /// Gets a singleton instance of the HTTP client configured for the Perplexity API.
+        /// </summary>
+        /// <returns>A configured HttpClient instance.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the SONAR_API_KEY environment variable is not set.</exception>
         public static HttpClient GetPerplexityClient()
         {
             if (_perplexityClient == null)
@@ -28,10 +35,10 @@ namespace vcrutils
         }
 
         /// <summary>
-        /// Extracts sources/citations from Perplexity API response and formats them as markdown
+        /// Extracts sources/citations from Perplexity API response and formats them as markdown.
         /// </summary>
-        /// <param name="perplexityJson">The JSON response from Perplexity API</param>
-        /// <returns>Markdown-formatted sources section, or empty string if no sources found</returns>
+        /// <param name="perplexityJson">The JSON response from Perplexity API.</param>
+        /// <returns>Markdown-formatted sources section, or empty string if no sources found.</returns>
         public static string ExtractSourcesAsMarkdown(JsonNode perplexityJson)
         {
             try

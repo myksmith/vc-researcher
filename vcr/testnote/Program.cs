@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -6,6 +6,10 @@ using vcrutils;
 
 class Program
 {
+    /// <summary>
+    /// Main entry point for the testnote application.
+    /// </summary>
+    /// <param name="args">Command-line arguments.</param>
     static async Task Main(string[] args)
     {
         if (args.Length == 0)
@@ -78,6 +82,10 @@ class Program
         }
     }
 
+    /// <summary>
+    /// Tests the extraction of sources from a Perplexity JSON response.
+    /// </summary>
+    /// <param name="jsonFilePath">The file path to the JSON response.</param>
     static async Task TestSourcesExtraction(string jsonFilePath)
     {
         try

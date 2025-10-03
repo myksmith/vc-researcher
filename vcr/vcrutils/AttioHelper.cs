@@ -14,12 +14,19 @@ namespace vcrutils
         Markdown
     }
 
+    /// <summary>
+    /// Provides helper methods for interacting with the Attio API.
+    /// </summary>
     public static class AttioHelper
     {
         // Singleton HTTP Client
         private static HttpClient? _attioClient;
 
-        // HTTP Client Helper Method (Singleton)
+        /// <summary>
+        /// Gets a singleton instance of the HTTP client configured for the Attio API.
+        /// </summary>
+        /// <returns>A configured HttpClient instance.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the ATTIO_API_KEY environment variable is not set.</exception>
         public static HttpClient GetAttioClient()
         {
             if (_attioClient == null)
@@ -36,6 +43,12 @@ namespace vcrutils
             return _attioClient;
         }
 
+        /// <summary>
+        /// Finds an Attio company record by investor domain using the provided HTTP client.
+        /// </summary>
+        /// <param name="client">The HTTP client to use for the request.</param>
+        /// <param name="investorDomain">The domain of the investor to search for.</param>
+        /// <returns>The record ID if found, null otherwise.</returns>
         public static async Task<string?> FindAttioRecord(HttpClient client, string investorDomain)
         {
             try
@@ -91,6 +104,11 @@ namespace vcrutils
             }
         }
 
+        /// <summary>
+        /// Finds an Attio company record by investor domain.
+        /// </summary>
+        /// <param name="investorDomain">The domain of the investor to search for.</param>
+        /// <returns>The record ID if found, null otherwise.</returns>
         public static async Task<string?> FindAttioRecord(string investorDomain)
         {
             try
@@ -105,6 +123,13 @@ namespace vcrutils
             }
         }
 
+        /// <summary>
+        /// Updates an Attio company record with the Notion research URL.
+        /// </summary>
+        /// <param name="client">The HTTP client to use for the request.</param>
+        /// <param name="recordId">The ID of the record to update.</param>
+        /// <param name="notionUrl">The Notion research URL to add to the record.</param>
+        /// <returns>True if the update was successful, false otherwise.</returns>
         public static async Task<bool> UpdateAttioCompanyRecord(HttpClient client, string recordId, string notionUrl)
         {
             try
@@ -153,6 +178,14 @@ namespace vcrutils
             }
         }
 
+        /// <summary>
+        /// Creates a note in Attio for a specified company record.
+        /// </summary>
+        /// <param name="recordId">The ID of the company record to associate the note with.</param>
+        /// <param name="titleString">The title of the note.</param>
+        /// <param name="contentString">The content of the note.</param>
+        /// <param name="format">The format of the note content (Plaintext or Markdown).</param>
+        /// <returns>True if the note was successfully created, false otherwise.</returns>
         public static async Task<bool> CreateAttioNote(string recordId, string titleString, string contentString, NoteFormat format)
         {
             try

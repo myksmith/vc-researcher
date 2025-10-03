@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 
 namespace vcrutils
 {
+    /// <summary>
+    /// Provides helper methods for interacting with the Notion API.
+    /// </summary>
     public static class NotionHelper
     {
         // Global constants
@@ -16,7 +19,11 @@ namespace vcrutils
         // Singleton HTTP Client
         private static HttpClient? _notionClient;
 
-        // HTTP Client Helper Method (Singleton)
+        /// <summary>
+        /// Gets a singleton instance of the HTTP client configured for the Notion API.
+        /// </summary>
+        /// <returns>A configured HttpClient instance.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the NOTION_API_KEY environment variable is not set.</exception>
         public static HttpClient GetNotionClient()
         {
             if (_notionClient == null)
@@ -35,12 +42,12 @@ namespace vcrutils
         }
 
         /// <summary>
-        /// Appends markdown content to a Notion page using the Mark2Notion API
+        /// Appends markdown content to a Notion page using the Mark2Notion API.
         /// </summary>
-        /// <param name="pageId">The Notion page ID to append content to</param>
-        /// <param name="markdownContent">The markdown content to append</param>
-        /// <param name="notionToken">The Notion API token</param>
-        /// <returns>True if successful, false otherwise</returns>
+        /// <param name="pageId">The Notion page ID to append content to.</param>
+        /// <param name="markdownContent">The markdown content to append.</param>
+        /// <param name="notionToken">The Notion API token.</param>
+        /// <returns>True if successful, false otherwise.</returns>
         public static async Task<bool> AppendMarkdownToNotionPage(string pageId, string markdownContent, string notionToken)
         {
             try
@@ -104,12 +111,12 @@ namespace vcrutils
         }
 
         /// <summary>
-        /// Creates a new Notion investor entry with domain, name, and markdown content
+        /// Creates a new Notion investor entry with domain, name, and markdown content.
         /// </summary>
-        /// <param name="domain">The investor domain</param>
-        /// <param name="name">The investor name</param>
-        /// <param name="markdownContent">The markdown content for the page</param>
-        /// <returns>The page ID if successful, null otherwise</returns>
+        /// <param name="domain">The investor domain.</param>
+        /// <param name="name">The investor name.</param>
+        /// <param name="markdownContent">The markdown content for the page.</param>
+        /// <returns>The page ID if successful, null otherwise.</returns>
         public static async Task<string?> CreateNotionInvestorEntry(string domain, string name, string markdownContent)
         {
             string databaseId = NOTION_INVESTOR_RESEARCH_DATABASE_ID;
@@ -188,6 +195,11 @@ namespace vcrutils
             }
         }
 
+        /// <summary>
+        /// Checks if a Notion page with the specified domain exists in the Investor Research database.
+        /// </summary>
+        /// <param name="investorDomain">The domain to check for.</param>
+        /// <returns>True if a page with the domain exists, false otherwise.</returns>
         public static async Task<bool> CheckNotionDomainExists(string investorDomain)
         {
             try
@@ -238,6 +250,11 @@ namespace vcrutils
             }
         }
 
+        /// <summary>
+        /// Finds the page ID of an existing Notion page with the specified domain in the Investor Research database.
+        /// </summary>
+        /// <param name="investorDomain">The domain to search for.</param>
+        /// <returns>The page ID if found, null otherwise.</returns>
         public static async Task<string?> FindExistingNotionPageId(string investorDomain)
         {
             try
@@ -298,6 +315,11 @@ namespace vcrutils
             }
         }
 
+        /// <summary>
+        /// Deletes a Notion page by archiving it.
+        /// </summary>
+        /// <param name="pageId">The ID of the page to delete.</param>
+        /// <returns>True if the page was successfully deleted, false otherwise.</returns>
         public static async Task<bool> DeleteNotionPage(string pageId)
         {
             try
