@@ -31,15 +31,15 @@ dotnet run <command> <investor-domain>
 
 ### Commands
 
-- `<investor-domain>`: Create research for the specified domain (aborts if already exists).
-- `--force-research <investor-domain>`: Create research even if duplicates exist.
-- `--regen-research <investor-domain>`: Delete existing research and create new one.
-- `--test-notion`: Test Notion API connection.
-- `--test-notion-insert`: Test Notion database entry creation with markdown.
-- `--ping-attio`: Ping Attio API for basic connectivity.
-- `--test-attio-list`: Test Attio list lookup for both target databases.
-- `--fix-links <domain>`: Update Attio with existing Notion research URL (no new research).
-- `--research-only-no-links <domain>`: Create new research in Notion only (no Attio updates).
+-   `<investor-domain>`: Create research for the specified domain (aborts if already exists).
+-   `--force-research <investor-domain>`: Create research even if duplicates exist.
+-   `--regen-research <investor-domain>`: Delete existing research and create new one.
+-   `--test-notion`: Test Notion API connection.
+-   `--test-notion-insert`: Test Notion database entry creation with markdown.
+-   `--ping-attio`: Ping Attio API for basic connectivity.
+-   `--test-attio-list`: Test Attio list lookup for both target databases.
+-   `--fix-links <domain>`: Update Attio with existing Notion research URL (no new research).
+-   `--research-only-no-links <domain>`: Create new research in Notion only (no Attio updates).
 
 ### Examples
 
