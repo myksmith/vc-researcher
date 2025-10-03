@@ -20,10 +20,17 @@ namespace VCR
 
                 try
                 {
-                    // Test by searching for the 'Investor Research' database specifically
+                    // Test by searching for the configured database name
+                    string databaseName = Environment.GetEnvironmentVariable("NOTION_DATABASE_NAME");
+                    if (string.IsNullOrEmpty(databaseName))
+                    {
+                        Console.WriteLine("❌ NOTION_DATABASE_NAME environment variable not set");
+                        return;
+                    }
+
                     var searchBody = new
                     {
-                        query = "Investor Research",
+                        query = databaseName,
                         filter = new { property = "object", value = "database" }
                     };
                     string searchJson = JsonSerializer.Serialize(searchBody);
@@ -42,29 +49,29 @@ namespace VCR
                         if (results != null && results.Count > 0)
                         {
                             Console.WriteLine($"Found {results.Count} matching database(s):");
-                            bool foundInvestorResearch = false;
+                            bool foundTargetDatabase = false;
                             foreach (var db in results)
                             {
                                 string id = db?["id"]?.ToString() ?? "unknown";
                                 string title = db?["title"]?.AsArray()?[0]?["plain_text"]?.ToString() ?? "Untitled";
                                 Console.WriteLine($"  - {title} (ID: {id})");
-                                if (title.Contains("Investor Research", StringComparison.OrdinalIgnoreCase))
+                                if (title.Contains(databaseName, StringComparison.OrdinalIgnoreCase))
                                 {
-                                    foundInvestorResearch = true;
-                                    Console.WriteLine($"    ✅ Found target 'Investor Research' database!");
+                                    foundTargetDatabase = true;
+                                    Console.WriteLine($"    ✅ Found target '{databaseName}' database!");
                                 }
                             }
-                            if (!foundInvestorResearch)
+                            if (!foundTargetDatabase)
                             {
-                                Console.WriteLine($"    ⚠️  'Investor Research' database not found in results");
+                                Console.WriteLine($"    ⚠️  '{databaseName}' database not found in results");
                             }
                         }
                         else
                         {
-                            Console.WriteLine("❌ No 'Investor Research' database found. Make sure:");
-                            Console.WriteLine("   1. The database exists in the sagittal Notion workspace");
+                            Console.WriteLine($"❌ No '{databaseName}' database found. Make sure:");
+                            Console.WriteLine("   1. The database exists in your Notion workspace");
                             Console.WriteLine("   2. Your Notion integration has access to it");
-                            Console.WriteLine("   3. The database is named 'Investor Research'");
+                            Console.WriteLine($"   3. The database is named '{databaseName}'");
                         }
                     }
                     else
@@ -131,6 +138,22 @@ namespace VCR
 
                 try
                 {
+                    // Get configured list names from environment variables
+                    string preseedListName = Environment.GetEnvironmentVariable("ATTIO_PRESEED_LIST_NAME");
+                    string startupListName = Environment.GetEnvironmentVariable("ATTIO_STARTUP_LIST_NAME");
+
+                    if (string.IsNullOrEmpty(preseedListName))
+                    {
+                        Console.WriteLine("❌ ATTIO_PRESEED_LIST_NAME environment variable not set");
+                        return;
+                    }
+
+                    if (string.IsNullOrEmpty(startupListName))
+                    {
+                        Console.WriteLine("❌ ATTIO_STARTUP_LIST_NAME environment variable not set");
+                        return;
+                    }
+
                     // First, list all available lists to find both target lists
                     Console.WriteLine("Fetching all lists...");
                     HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/lists");
@@ -159,63 +182,63 @@ namespace VCR
 
                                 Console.WriteLine($"  - {name} (slug: {apiSlug}, id: {listId})");
 
-                                if (name.Contains("Preseed VCs from Notion", StringComparison.OrdinalIgnoreCase))
+                                if (name.Contains(preseedListName, StringComparison.OrdinalIgnoreCase))
                                 {
                                     preseedVCsListId = listId;
-                                    Console.WriteLine($"    ✅ Found target 'Preseed VCs from Notion' list!");
+                                    Console.WriteLine($"    ✅ Found target '{preseedListName}' list!");
                                 }
-                                else if (name.Contains("Startup Fundraising", StringComparison.OrdinalIgnoreCase))
+                                else if (name.Contains(startupListName, StringComparison.OrdinalIgnoreCase))
                                 {
                                     startupFundraisingListId = listId;
-                                    Console.WriteLine($"    ✅ Found target 'Startup Fundraising' list!");
+                                    Console.WriteLine($"    ✅ Found target '{startupListName}' list!");
                                 }
                             }
 
                             // Test both lists if found
                             if (preseedVCsListId != null)
                             {
-                                Console.WriteLine($"\n🔎 Getting details for Preseed VCs list (ID: {preseedVCsListId})...");
+                                Console.WriteLine($"\n🔎 Getting details for {preseedListName} list (ID: {preseedVCsListId})...");
 
                                 HttpResponseMessage listResponse = await client.GetAsync($"https://api.attio.com/v2/lists/{preseedVCsListId}");
                                 string listResponseBody = await listResponse.Content.ReadAsStringAsync();
 
                                 if (listResponse.IsSuccessStatusCode)
                                 {
-                                    Console.WriteLine("✅ Successfully retrieved Preseed VCs list details!");
-                                    Console.WriteLine($"Preseed VCs list details: {listResponseBody}");
+                                    Console.WriteLine($"✅ Successfully retrieved {preseedListName} list details!");
+                                    Console.WriteLine($"{preseedListName} list details: {listResponseBody}");
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"❌ Failed to get Preseed VCs list details: {listResponse.StatusCode}");
+                                    Console.WriteLine($"❌ Failed to get {preseedListName} list details: {listResponse.StatusCode}");
                                     Console.WriteLine($"Response: {listResponseBody}");
                                 }
                             }
                             else
                             {
-                                Console.WriteLine($"❌ 'Preseed VCs from Notion' list not found.");
+                                Console.WriteLine($"❌ '{preseedListName}' list not found.");
                             }
 
                             if (startupFundraisingListId != null)
                             {
-                                Console.WriteLine($"\n🔎 Getting details for Startup Fundraising list (ID: {startupFundraisingListId})...");
+                                Console.WriteLine($"\n🔎 Getting details for {startupListName} list (ID: {startupFundraisingListId})...");
 
                                 HttpResponseMessage listResponse = await client.GetAsync($"https://api.attio.com/v2/lists/{startupFundraisingListId}");
                                 string listResponseBody = await listResponse.Content.ReadAsStringAsync();
 
                                 if (listResponse.IsSuccessStatusCode)
                                 {
-                                    Console.WriteLine("✅ Successfully retrieved Startup Fundraising list details!");
-                                    Console.WriteLine($"Startup Fundraising list details: {listResponseBody}");
+                                    Console.WriteLine($"✅ Successfully retrieved {startupListName} list details!");
+                                    Console.WriteLine($"{startupListName} list details: {listResponseBody}");
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"❌ Failed to get Startup Fundraising list details: {listResponse.StatusCode}");
+                                    Console.WriteLine($"❌ Failed to get {startupListName} list details: {listResponse.StatusCode}");
                                     Console.WriteLine($"Response: {listResponseBody}");
                                 }
                             }
                             else
                             {
-                                Console.WriteLine($"❌ 'Startup Fundraising' list not found.");
+                                Console.WriteLine($"❌ '{startupListName}' list not found.");
                             }
 
                             // Show summary
@@ -231,8 +254,8 @@ namespace VCR
                             else
                             {
                                 Console.WriteLine($"\n📊 Summary:");
-                                Console.WriteLine($"  - Preseed VCs from Notion: {(preseedVCsListId != null ? "✅ Found" : "❌ Not found")}");
-                                Console.WriteLine($"  - Startup Fundraising: {(startupFundraisingListId != null ? "✅ Found" : "❌ Not found")}");
+                                Console.WriteLine($"  - {preseedListName}: {(preseedVCsListId != null ? "✅ Found" : "❌ Not found")}");
+                                Console.WriteLine($"  - {startupListName}: {(startupFundraisingListId != null ? "✅ Found" : "❌ Not found")}");
                             }
                         }
                         else

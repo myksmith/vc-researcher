@@ -22,7 +22,11 @@ namespace VCR
             { "SONAR_API_KEY", "Perplexity API" },
             { "NOTION_API_KEY", "Notion API" },
             { "ATTIO_API_KEY", "Attio CRM API" },
-            { "MARK2NOTION_API_KEY", "Mark2Notion API" }
+            { "MARK2NOTION_API_KEY", "Mark2Notion API" },
+            { "NOTION_DATABASE_ID", "Notion Investor Research Database ID" },
+            { "ATTIO_PRESEED_LIST_NAME", "Attio Preseed VCs List Name" },
+            { "ATTIO_STARTUP_LIST_NAME", "Attio Startup Fundraising List Name" },
+            { "NOTION_DATABASE_NAME", "Notion Database Name for searches" }
         };
 
         var missingVars = new List<string>();
@@ -43,17 +47,21 @@ namespace VCR
             {
                 Console.WriteLine($"  - {missing}");
             }
-            Console.WriteLine("\nPlease set all required API keys before running the application.");
+            Console.WriteLine("\nPlease set all required API keys and configuration before running the application.");
             Console.WriteLine("Example:");
             Console.WriteLine("  export SONAR_API_KEY=\"your_perplexity_key\"");
             Console.WriteLine("  export NOTION_API_KEY=\"your_notion_key\"");
             Console.WriteLine("  export ATTIO_API_KEY=\"your_attio_key\"");
             Console.WriteLine("  export MARK2NOTION_API_KEY=\"your_mark2notion_key\"");
+            Console.WriteLine("  export NOTION_DATABASE_ID=\"your_notion_database_id\"");
+            Console.WriteLine("  export ATTIO_PRESEED_LIST_NAME=\"your_preseed_list_name\"");
+            Console.WriteLine("  export ATTIO_STARTUP_LIST_NAME=\"your_startup_list_name\"");
+            Console.WriteLine("  export NOTION_DATABASE_NAME=\"your_database_name\"");
             Environment.Exit(1);
             return;
         }
 
-        Console.WriteLine("✅ All required API keys are configured");
+        Console.WriteLine("✅ All required API keys and configuration are set");
 
         // Argument validation
         if (args.Length == 0)
@@ -339,7 +347,8 @@ namespace VCR
                 string queryJson = System.Text.Json.JsonSerializer.Serialize(queryBody);
                 var queryContent = new StringContent(queryJson, Encoding.UTF8, "application/json");
                 
-                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NotionHelper.NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", queryContent);
+                string databaseId = Environment.GetEnvironmentVariable("NOTION_DATABASE_ID");
+                HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{databaseId}/query", queryContent);
                 string responseBody = await response.Content.ReadAsStringAsync();
                 
                 if (response.IsSuccessStatusCode)
