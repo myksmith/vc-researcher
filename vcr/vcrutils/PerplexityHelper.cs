@@ -83,7 +83,7 @@ namespace vcrutils
                             {
                                 // Limit snippet length for readability
                                 string trimmedSnippet = snippet.Length > 200 ? snippet.Substring(0, 200) + "..." : snippet;
-                                markdown.AppendLine($"  - {trimmedSnippet}");
+                                markdown.AppendLine($"   - {trimmedSnippet}");
                             }
 
                             index++;
