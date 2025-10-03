@@ -188,8 +188,16 @@ namespace VCR
             // Step 1: Validate both systems are accessible BEFORE doing expensive Perplexity call
             Console.WriteLine($"🔍 Validating systems for {investorDomain}...");
 
-            string? notionDbOk = await ValidateNotionDatabase();
-            string attioCompanyId = await AttioHelper.FindAttioRecord(investorDomain);
+            var validationTasks = new List<Task<string?>>
+            {
+                ValidateNotionDatabase(),
+                AttioHelper.FindAttioRecord(investorDomain)
+            };
+
+            var validationResults = await Task.WhenAll(validationTasks);
+
+            string? notionDbOk = validationResults[0];
+            string attioCompanyId = validationResults[1];
 
             // Early exit if either system is not available
             if (notionDbOk == null)
@@ -624,8 +632,16 @@ namespace VCR
             // Step 3: Validate both systems are accessible BEFORE doing expensive Perplexity call
             Console.WriteLine($"🔍 Validating systems for {investorDomain}...");
 
-            string? notionDbOk = await ValidateNotionDatabase();
-            string attioCompanyId = await AttioHelper.FindAttioRecord(investorDomain);
+            var validationTasks = new List<Task<string?>>
+            {
+                ValidateNotionDatabase(),
+                AttioHelper.FindAttioRecord(investorDomain)
+            };
+
+            var validationResults = await Task.WhenAll(validationTasks);
+
+            string? notionDbOk = validationResults[0];
+            string attioCompanyId = validationResults[1];
 
             // Early exit if either system is not available
             if (notionDbOk == null)

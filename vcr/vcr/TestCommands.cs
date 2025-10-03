@@ -5,11 +5,15 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using vcrutils;
+using System.Collections.Generic;
+using System.Runtime.Caching;
 
 namespace VCR
 {
     public static class TestCommands
     {
+        private static readonly MemoryCache cache = MemoryCache.Default;
+
         public static async Task TestNotionConnection()
         {
             Console.WriteLine("🧪 Testing Notion API connection...");
@@ -133,117 +137,98 @@ namespace VCR
                 {
                     // First, list all available lists to find both target lists
                     Console.WriteLine("Fetching all lists...");
-                    HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/lists");
-                    string responseBody = await response.Content.ReadAsStringAsync();
-
-                    Console.WriteLine($"Status: {response.StatusCode}");
-
-                    if (response.IsSuccessStatusCode)
+                    string cacheKey = "attioLists";
+                    if (!cache.Contains(cacheKey))
                     {
-                        Console.WriteLine("✅ Successfully fetched lists!");
-                        JsonNode node = JsonNode.Parse(responseBody);
-                        var lists = node?["data"]?.AsArray();
+                        HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/lists");
+                        string responseBody = await response.Content.ReadAsStringAsync();
 
-                        if (lists != null && lists.Count > 0)
+                        if (response.IsSuccessStatusCode)
                         {
-                            Console.WriteLine($"Found {lists.Count} list(s):");
+                            cache.Set(cacheKey, responseBody, DateTimeOffset.Now.AddMinutes(10));
+                        }
+                        else
+                        {
+                            Console.WriteLine($"❌ Failed to fetch lists: {response.StatusCode}");
+                            Console.WriteLine($"Response: {responseBody}");
+                            return;
+                        }
+                    }
 
-                            string? preseedVCsListId = null;
-                            string? startupFundraisingListId = null;
+                    string cachedResponseBody = cache.Get(cacheKey) as string;
+                    Console.WriteLine("✅ Successfully fetched lists!");
+                    JsonNode node = JsonNode.Parse(cachedResponseBody);
+                    var lists = node?["data"]?.AsArray();
 
+                    if (lists != null && lists.Count > 0)
+                    {
+                        Console.WriteLine($"Found {lists.Count} list(s):");
+
+                        string? preseedVCsListId = null;
+                        string? startupFundraisingListId = null;
+
+                        foreach (var list in lists)
+                        {
+                            string name = list?["name"]?.ToString() ?? "Unknown";
+                            string apiSlug = list?["api_slug"]?.ToString() ?? "unknown";
+                            string listId = list?["id"]?["list_id"]?.ToString() ?? "unknown";
+
+                            Console.WriteLine($"  - {name} (slug: {apiSlug}, id: {listId})");
+
+                            if (name.Contains("Preseed VCs from Notion", StringComparison.OrdinalIgnoreCase))
+                            {
+                                preseedVCsListId = listId;
+                                Console.WriteLine($"    ✅ Found target 'Preseed VCs from Notion' list!");
+                            }
+                            else if (name.Contains("Startup Fundraising", StringComparison.OrdinalIgnoreCase))
+                            {
+                                startupFundraisingListId = listId;
+                                Console.WriteLine($"    ✅ Found target 'Startup Fundraising' list!");
+                            }
+                        }
+
+                        var tasks = new List<Task>();
+
+                        if (preseedVCsListId != null)
+                        {
+                            tasks.Add(GetListDetails(client, preseedVCsListId, "Preseed VCs"));
+                        }
+                        else
+                        {
+                            Console.WriteLine($"❌ 'Preseed VCs from Notion' list not found.");
+                        }
+
+                        if (startupFundraisingListId != null)
+                        {
+                            tasks.Add(GetListDetails(client, startupFundraisingListId, "Startup Fundraising"));
+                        }
+                        else
+                        {
+                            Console.WriteLine($"❌ 'Startup Fundraising' list not found.");
+                        }
+
+                        await Task.WhenAll(tasks);
+
+                        // Show summary
+                        if (preseedVCsListId == null && startupFundraisingListId == null)
+                        {
+                            Console.WriteLine($"\n❌ Neither target list found. Available lists:");
                             foreach (var list in lists)
                             {
                                 string name = list?["name"]?.ToString() ?? "Unknown";
-                                string apiSlug = list?["api_slug"]?.ToString() ?? "unknown";
-                                string listId = list?["id"]?["list_id"]?.ToString() ?? "unknown";
-
-                                Console.WriteLine($"  - {name} (slug: {apiSlug}, id: {listId})");
-
-                                if (name.Contains("Preseed VCs from Notion", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    preseedVCsListId = listId;
-                                    Console.WriteLine($"    ✅ Found target 'Preseed VCs from Notion' list!");
-                                }
-                                else if (name.Contains("Startup Fundraising", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    startupFundraisingListId = listId;
-                                    Console.WriteLine($"    ✅ Found target 'Startup Fundraising' list!");
-                                }
-                            }
-
-                            // Test both lists if found
-                            if (preseedVCsListId != null)
-                            {
-                                Console.WriteLine($"\n🔎 Getting details for Preseed VCs list (ID: {preseedVCsListId})...");
-
-                                HttpResponseMessage listResponse = await client.GetAsync($"https://api.attio.com/v2/lists/{preseedVCsListId}");
-                                string listResponseBody = await listResponse.Content.ReadAsStringAsync();
-
-                                if (listResponse.IsSuccessStatusCode)
-                                {
-                                    Console.WriteLine("✅ Successfully retrieved Preseed VCs list details!");
-                                    Console.WriteLine($"Preseed VCs list details: {listResponseBody}");
-                                }
-                                else
-                                {
-                                    Console.WriteLine($"❌ Failed to get Preseed VCs list details: {listResponse.StatusCode}");
-                                    Console.WriteLine($"Response: {listResponseBody}");
-                                }
-                            }
-                            else
-                            {
-                                Console.WriteLine($"❌ 'Preseed VCs from Notion' list not found.");
-                            }
-
-                            if (startupFundraisingListId != null)
-                            {
-                                Console.WriteLine($"\n🔎 Getting details for Startup Fundraising list (ID: {startupFundraisingListId})...");
-
-                                HttpResponseMessage listResponse = await client.GetAsync($"https://api.attio.com/v2/lists/{startupFundraisingListId}");
-                                string listResponseBody = await listResponse.Content.ReadAsStringAsync();
-
-                                if (listResponse.IsSuccessStatusCode)
-                                {
-                                    Console.WriteLine("✅ Successfully retrieved Startup Fundraising list details!");
-                                    Console.WriteLine($"Startup Fundraising list details: {listResponseBody}");
-                                }
-                                else
-                                {
-                                    Console.WriteLine($"❌ Failed to get Startup Fundraising list details: {listResponse.StatusCode}");
-                                    Console.WriteLine($"Response: {listResponseBody}");
-                                }
-                            }
-                            else
-                            {
-                                Console.WriteLine($"❌ 'Startup Fundraising' list not found.");
-                            }
-
-                            // Show summary
-                            if (preseedVCsListId == null && startupFundraisingListId == null)
-                            {
-                                Console.WriteLine($"\n❌ Neither target list found. Available lists:");
-                                foreach (var list in lists)
-                                {
-                                    string name = list?["name"]?.ToString() ?? "Unknown";
-                                    Console.WriteLine($"   - {name}");
-                                }
-                            }
-                            else
-                            {
-                                Console.WriteLine($"\n📊 Summary:");
-                                Console.WriteLine($"  - Preseed VCs from Notion: {(preseedVCsListId != null ? "✅ Found" : "❌ Not found")}");
-                                Console.WriteLine($"  - Startup Fundraising: {(startupFundraisingListId != null ? "✅ Found" : "❌ Not found")}");
+                                Console.WriteLine($"   - {name}");
                             }
                         }
                         else
                         {
-                            Console.WriteLine("❌ No lists found");
+                            Console.WriteLine($"\n📊 Summary:");
+                            Console.WriteLine($"  - Preseed VCs from Notion: {(preseedVCsListId != null ? "✅ Found" : "❌ Not found")}");
+                            Console.WriteLine($"  - Startup Fundraising: {(startupFundraisingListId != null ? "✅ Found" : "❌ Not found")}");
                         }
                     }
                     else
                     {
-                        Console.WriteLine($"❌ Failed to fetch lists: {response.StatusCode}");
-                        Console.WriteLine($"Response: {responseBody}");
+                        Console.WriteLine("❌ No lists found");
                     }
                 }
                 catch (Exception ex)
@@ -254,6 +239,25 @@ namespace VCR
             catch (InvalidOperationException ex)
             {
                 Console.WriteLine($"❌ {ex.Message}");
+            }
+        }
+
+        private static async Task GetListDetails(HttpClient client, string listId, string listName)
+        {
+            Console.WriteLine($"\n🔎 Getting details for {listName} list (ID: {listId})...");
+
+            HttpResponseMessage listResponse = await client.GetAsync($"https://api.attio.com/v2/lists/{listId}");
+            string listResponseBody = await listResponse.Content.ReadAsStringAsync();
+
+            if (listResponse.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"✅ Successfully retrieved {listName} list details!");
+                Console.WriteLine($"{listName} list details: {listResponseBody}");
+            }
+            else
+            {
+                Console.WriteLine($"❌ Failed to get {listName} list details: {listResponse.StatusCode}");
+                Console.WriteLine($"Response: {listResponseBody}");
             }
         }
 
