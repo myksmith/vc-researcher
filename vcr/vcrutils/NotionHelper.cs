@@ -69,8 +69,8 @@ namespace vcrutils
                     var mark2NotionContent = new StringContent(mark2NotionJson, Encoding.UTF8, "application/json");
 
                     // Call the Mark2Notion append API
-                    HttpResponseMessage mark2NotionResponse = await mark2NotionClient.PostAsync("https://api.mark2notion.com/api/append", mark2NotionContent);
-                    string mark2NotionResponseBody = await mark2NotionResponse.Content.ReadAsStringAsync();
+                    HttpResponseMessage mark2NotionResponse = await mark2NotionClient.PostAsync("https://api.mark2notion.com/api/append", mark2NotionContent).ConfigureAwait(false);
+                    string mark2NotionResponseBody = await mark2NotionResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                     if (mark2NotionResponse.IsSuccessStatusCode)
                     {
@@ -154,8 +154,8 @@ namespace vcrutils
                     string createJson = JsonSerializer.Serialize(createPageBody);
                     var createContent = new StringContent(createJson, Encoding.UTF8, "application/json");
 
-                    HttpResponseMessage createResponse = await client.PostAsync("https://api.notion.com/v1/pages", createContent);
-                    string createResponseBody = await createResponse.Content.ReadAsStringAsync();
+                    HttpResponseMessage createResponse = await client.PostAsync("https://api.notion.com/v1/pages", createContent).ConfigureAwait(false);
+                    string createResponseBody = await createResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                     if (createResponse.IsSuccessStatusCode)
                     {
@@ -166,7 +166,7 @@ namespace vcrutils
                         if (!string.IsNullOrEmpty(pageId))
                         {
                             // Step 2: Add markdown content to the page using Mark2Notion API
-                            bool success = await AppendMarkdownToNotionPage(pageId, markdownContent, notionToken);
+                            bool success = await AppendMarkdownToNotionPage(pageId, markdownContent, notionToken).ConfigureAwait(false);
                             if (success)
                             {
                                 return pageId;
@@ -212,8 +212,8 @@ namespace vcrutils
                     string searchJson = JsonSerializer.Serialize(searchBody);
                     var searchContent = new StringContent(searchJson, Encoding.UTF8, "application/json");
 
-                    HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent);
-                    string responseBody = await response.Content.ReadAsStringAsync();
+                    HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent).ConfigureAwait(false);
+                    string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                     if (response.IsSuccessStatusCode)
                     {
@@ -262,8 +262,8 @@ namespace vcrutils
                     string searchJson = JsonSerializer.Serialize(searchBody);
                     var searchContent = new StringContent(searchJson, Encoding.UTF8, "application/json");
 
-                    HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent);
-                    string responseBody = await response.Content.ReadAsStringAsync();
+                    HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent).ConfigureAwait(false);
+                    string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                     if (response.IsSuccessStatusCode)
                     {
@@ -317,8 +317,8 @@ namespace vcrutils
                     string updateJson = JsonSerializer.Serialize(updateBody);
                     var updateContent = new StringContent(updateJson, Encoding.UTF8, "application/json");
 
-                    HttpResponseMessage response = await client.PatchAsync($"https://api.notion.com/v1/pages/{pageId}", updateContent);
-                    string responseBody = await response.Content.ReadAsStringAsync();
+                    HttpResponseMessage response = await client.PatchAsync($"https://api.notion.com/v1/pages/{pageId}", updateContent).ConfigureAwait(false);
+                    string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                     if (response.IsSuccessStatusCode)
                     {

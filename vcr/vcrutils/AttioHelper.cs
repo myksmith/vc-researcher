@@ -54,8 +54,8 @@ namespace vcrutils
                 string queryJson = JsonSerializer.Serialize(queryBody);
                 var queryContent = new StringContent(queryJson, Encoding.UTF8, "application/json");
 
-                HttpResponseMessage response = await client.PostAsync("https://api.attio.com/v2/objects/companies/records/query", queryContent);
-                string responseBody = await response.Content.ReadAsStringAsync();
+                HttpResponseMessage response = await client.PostAsync("https://api.attio.com/v2/objects/companies/records/query", queryContent).ConfigureAwait(false);
+                string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -96,7 +96,7 @@ namespace vcrutils
             try
             {
                 HttpClient client = GetAttioClient();
-                return await FindAttioRecord(client, investorDomain);
+                return await FindAttioRecord(client, investorDomain).ConfigureAwait(false);
             }
             catch (InvalidOperationException ex)
             {
@@ -131,8 +131,8 @@ namespace vcrutils
                 string updateJson = JsonSerializer.Serialize(updateBody);
                 var updateContent = new StringContent(updateJson, Encoding.UTF8, "application/json");
 
-                HttpResponseMessage updateResponse = await client.PatchAsync($"https://api.attio.com/v2/objects/companies/records/{recordId}", updateContent);
-                string updateResponseBody = await updateResponse.Content.ReadAsStringAsync();
+                HttpResponseMessage updateResponse = await client.PatchAsync($"https://api.attio.com/v2/objects/companies/records/{recordId}", updateContent).ConfigureAwait(false);
+                string updateResponseBody = await updateResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 if (updateResponse.IsSuccessStatusCode)
                 {
@@ -176,8 +176,8 @@ namespace vcrutils
                 string jsonBody = JsonSerializer.Serialize(requestBody);
                 var httpContent = new StringContent(jsonBody, Encoding.UTF8, "application/json");
 
-                HttpResponseMessage response = await client.PostAsync("https://api.attio.com/v2/notes", httpContent);
-                string responseBody = await response.Content.ReadAsStringAsync();
+                HttpResponseMessage response = await client.PostAsync("https://api.attio.com/v2/notes", httpContent).ConfigureAwait(false);
+                string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode)
                 {

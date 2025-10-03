@@ -28,8 +28,8 @@ namespace VCR
                     };
                     string searchJson = JsonSerializer.Serialize(searchBody);
                     var searchContent = new StringContent(searchJson, Encoding.UTF8, "application/json");
-                    HttpResponseMessage response = await client.PostAsync("https://api.notion.com/v1/search", searchContent);
-                    string responseBody = await response.Content.ReadAsStringAsync();
+                    HttpResponseMessage response = await client.PostAsync("https://api.notion.com/v1/search", searchContent).ConfigureAwait(false);
+                    string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                     if (response.IsSuccessStatusCode)
                     {
@@ -95,8 +95,8 @@ namespace VCR
                 try
                 {
                     // Basic ping to list objects
-                    HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/objects");
-                    string responseBody = await response.Content.ReadAsStringAsync();
+                    HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/objects").ConfigureAwait(false);
+                    string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                     Console.WriteLine($"Status: {response.StatusCode}");
                     Console.WriteLine($"Response: {responseBody}");
@@ -133,8 +133,8 @@ namespace VCR
                 {
                     // First, list all available lists to find both target lists
                     Console.WriteLine("Fetching all lists...");
-                    HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/lists");
-                    string responseBody = await response.Content.ReadAsStringAsync();
+                    HttpResponseMessage response = await client.GetAsync("https://api.attio.com/v2/lists").ConfigureAwait(false);
+                    string responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                     Console.WriteLine($"Status: {response.StatusCode}");
 
@@ -176,8 +176,8 @@ namespace VCR
                             {
                                 Console.WriteLine($"\n🔎 Getting details for Preseed VCs list (ID: {preseedVCsListId})...");
 
-                                HttpResponseMessage listResponse = await client.GetAsync($"https://api.attio.com/v2/lists/{preseedVCsListId}");
-                                string listResponseBody = await listResponse.Content.ReadAsStringAsync();
+                                HttpResponseMessage listResponse = await client.GetAsync($"https://api.attio.com/v2/lists/{preseedVCsListId}").ConfigureAwait(false);
+                                string listResponseBody = await listResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                                 if (listResponse.IsSuccessStatusCode)
                                 {
@@ -199,8 +199,8 @@ namespace VCR
                             {
                                 Console.WriteLine($"\n🔎 Getting details for Startup Fundraising list (ID: {startupFundraisingListId})...");
 
-                                HttpResponseMessage listResponse = await client.GetAsync($"https://api.attio.com/v2/lists/{startupFundraisingListId}");
-                                string listResponseBody = await listResponse.Content.ReadAsStringAsync();
+                                HttpResponseMessage listResponse = await client.GetAsync($"https://api.attio.com/v2/lists/{startupFundraisingListId}").ConfigureAwait(false);
+                                string listResponseBody = await listResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                                 if (listResponse.IsSuccessStatusCode)
                                 {
@@ -275,7 +275,7 @@ This is a test entry for TestVC (testvc.vc).
 **Overall: Good test case for API integration.**";
 
             Console.WriteLine($"Creating entry for {testName} ({testDomain})...");
-            string? pageId = await NotionHelper.CreateNotionInvestorEntry(testDomain, testName, testMarkdown);
+            string? pageId = await NotionHelper.CreateNotionInvestorEntry(testDomain, testName, testMarkdown).ConfigureAwait(false);
 
             if (pageId != null)
             {
