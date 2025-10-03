@@ -16,20 +16,12 @@ namespace vcrutils
         // Singleton HTTP Client
         private static HttpClient? _notionClient;
 
-        // HTTP Client Helper Method (Singleton)
+        // HTTP Client Helper Method
         public static HttpClient GetNotionClient()
         {
             if (_notionClient == null)
             {
-                string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
-                if (string.IsNullOrEmpty(notionToken))
-                {
-                    throw new InvalidOperationException("NOTION_API_KEY environment variable not set");
-                }
-
-                _notionClient = new HttpClient();
-                _notionClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
-                _notionClient.DefaultRequestHeaders.Add("Notion-Version", "2022-06-28");
+                _notionClient = HttpClientFactory.CreateNotionClient();
             }
             return _notionClient;
         }
