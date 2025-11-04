@@ -1,7 +1,7 @@
 # Neo: Investor Search Criteria Report
 
 ## Introduction
-This document summarizes the investor search criteria for Neo’s $5M seed raise. 
+This document summarizes the investor search criteria for Neo’s $3M seed raise. 
 It captures the parameters and target values that define the ideal investors to approach. 
 The goal is to ensure a focused search targeting funds most aligned with Neo’s stage, sector, and enterprise-first strategy.  
 
@@ -11,7 +11,7 @@ The goal is to ensure a focused search targeting funds most aligned with Neo’s
 Seed and early-stage funds (pre-seed/seed/Series A), plus multi-stage funds with active seed practices.  
 
 **Cheque size range:**  
-\$1M–\$5M, ideally with capacity to lead/co-lead a \$5M round. Target funds to lead that can write \$2M–\$3M lead checks.  
+\$1M–\$3M, ideally with capacity to lead/co-lead a \$3M round. Target funds to lead that can write \$1M–\$3M lead checks.  
 Do not exclude VCs with cheque sizes \$500k or more; just let me know that they are incapable of leading (and therefore I will prioritize later)
 
 **Geo focus:**  
@@ -37,7 +37,7 @@ Funds with meaningful reserves for pro-rata and follow-on participation through 
 Investors who bring enterprise GTM playbooks, CIO/CTO connections, MSP/SI networks, and technical AI expertise.  
 
 **Check frequency / lead vs. follow:**  
-Preference for funds that frequently lead \$3M–\$5M seed rounds, not only followers.  
+Preference for funds that frequently lead \$1M–\$3M seed rounds, not only followers.  
 
 **Capital availability:**  
 Funds that raised within the last 3 years, with \$100M+ fund size, and demonstrable dry powder (actively deploying).  
