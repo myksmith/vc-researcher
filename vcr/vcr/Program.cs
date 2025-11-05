@@ -215,21 +215,23 @@ namespace VCR
             }
             Console.WriteLine("✅ Completed Perplexity analysis");
 
-            // Step 3: Create Notion research page
+            // Step 3: Add Perplexity research as a note to the Attio company record FIRST
+            // This ensures we save the research even if Notion/Mark2Notion fails
+            await AddNoteToAttioRecord(attioCompanyId, perplexityJson);
+
+            // Step 4: Create Notion research page
             string? notionPageUrl = await UpdateNotionDatabase("validated", investorDomain, perplexityJson);
             if (notionPageUrl == null)
             {
-                Console.WriteLine("❌ Failed to create Notion page - cannot update Attio with URL");
+                Console.WriteLine("⚠️  Failed to create Notion page - research saved to Attio but Attio URL not updated");
+                Console.WriteLine($"🎉 Research for {investorDomain} saved to Attio (Notion creation failed)");
                 return;
             }
             Console.WriteLine("✅ Created Notion research page");
 
-            // Step 4: Update Attio company record with the Notion URL
+            // Step 5: Update Attio company record with the Notion URL (only if Notion creation succeeded)
             await UpdateAttioCRM(attioCompanyId, investorDomain, notionPageUrl);
             Console.WriteLine("✅ Updated Attio company record");
-
-            // Step 5: Add Perplexity research as a note to the Attio company record
-            await AddNoteToAttioRecord(attioCompanyId, perplexityJson);
 
             Console.WriteLine($"🎉 Successfully processed {investorDomain}");
         }
@@ -391,7 +393,7 @@ namespace VCR
 
     static async Task AddNoteToAttioRecord(string attioCompanyId, JsonNode perplexityJson)
     {
-        // Step 5: Add Perplexity research as a note to the Attio company record
+        // Add Perplexity research as a note to the Attio company record
         string perplexityMarkdown = RenderPerplexityJsonToMarkdown(perplexityJson);
         // Remove the dollar sign escaping since Attio doesn't need it
         string attioMarkdown = perplexityMarkdown.Replace("\\$", "$");
@@ -651,21 +653,23 @@ namespace VCR
             }
             Console.WriteLine("✅ Completed Perplexity analysis");
 
-            // Step 5: Create new Notion research page
+            // Step 5: Add Perplexity research as a note to the Attio company record FIRST
+            // This ensures we save the research even if Notion/Mark2Notion fails
+            await AddNoteToAttioRecord(attioCompanyId, perplexityJson);
+
+            // Step 6: Create new Notion research page
             string? notionPageUrl = await UpdateNotionDatabase("regenerated", investorDomain, perplexityJson);
             if (notionPageUrl == null)
             {
-                Console.WriteLine("❌ Failed to create new Notion page - cannot update Attio with URL");
+                Console.WriteLine("⚠️  Failed to create new Notion page - research saved to Attio but Attio URL not updated");
+                Console.WriteLine($"🎉 Research for {investorDomain} saved to Attio (Notion creation failed)");
                 return;
             }
             Console.WriteLine("✅ Created new Notion research page");
 
-            // Step 6: Update Attio company record with the new Notion URL
+            // Step 7: Update Attio company record with the new Notion URL (only if Notion creation succeeded)
             await UpdateAttioCRM(attioCompanyId, investorDomain, notionPageUrl);
             Console.WriteLine("✅ Updated Attio company record");
-
-            // Step 7: Add Perplexity research as a note to the Attio company record
-            await AddNoteToAttioRecord(attioCompanyId, perplexityJson);
 
             Console.WriteLine($"🎉 Successfully regenerated research for {investorDomain}");
         }
