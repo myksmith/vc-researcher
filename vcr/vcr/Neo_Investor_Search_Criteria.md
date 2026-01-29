@@ -37,7 +37,7 @@ Funds with meaningful reserves for pro-rata and follow-on participation through 
 Investors who bring enterprise GTM playbooks, CIO/CTO connections, MSP/SI networks, and technical AI expertise.  
 
 **Check frequency / lead vs. follow:**  
-Preference for funds that frequently lead \$2M–\$4M seed rounds, not only followers.  
+Preference for funds that frequently lead \$3M seed rounds, not only followers.  
 
 **Capital availability:**  
 Funds that raised within the last 3 years, with \$100M+ fund size, and demonstrable dry powder (actively deploying).  

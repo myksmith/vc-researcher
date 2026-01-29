@@ -280,7 +280,7 @@ namespace VCR
                     new
                     {
                         role = "user",
-                        content = $"Research the venture capital firm at {investorDomain} and evaluate whether it would be a good fit for Neo's $5M seed round based on the specific investor criteria provided below.\n\n" +
+                        content = $"Research the venture capital firm at {investorDomain} and evaluate whether it would be a good fit as an investor, based on the specific criteria provided below.\n\n" +
                                  $"INVESTOR CRITERIA CONTEXT:\n{investorCriteria}\n\n" +
                                  $"IMPORTANT: Format your response as proper Markdown. Start your response with exactly this format on the first line:\n" +
                                  $"VC Name: [Full Name of the VC Firm]\n\n" +

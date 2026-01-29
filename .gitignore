@@ -2,3 +2,5 @@ vcr/vcr/bin/*
 vcr/vcr/obj/*
 vcr/.DS_Store/*
 vcr/vcr/templist
+vcr/vcr/package.json
+vcr/vcr/package-lock.json
