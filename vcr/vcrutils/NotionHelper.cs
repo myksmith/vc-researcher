@@ -10,11 +10,19 @@ namespace vcrutils
 {
     public static class NotionHelper
     {
-        // Global constants
-        public const string NOTION_INVESTOR_RESEARCH_DATABASE_ID = "27b6ef03-8cf6-8059-9860-c0ec6873c896";
-
         // Singleton HTTP Client
         private static HttpClient? _notionClient;
+
+        // Helper method to get the Notion database ID from environment variable
+        private static string GetNotionDatabaseId()
+        {
+            string databaseId = Environment.GetEnvironmentVariable("NOTION_DATABASE_ID");
+            if (string.IsNullOrEmpty(databaseId))
+            {
+                throw new InvalidOperationException("NOTION_DATABASE_ID environment variable not set");
+            }
+            return databaseId;
+        }
 
         // HTTP Client Helper Method (Singleton)
         public static HttpClient GetNotionClient()
@@ -26,6 +34,9 @@ namespace vcrutils
                 {
                     throw new InvalidOperationException("NOTION_API_KEY environment variable not set");
                 }
+
+                // Validate that the database ID is also available
+                GetNotionDatabaseId();
 
                 _notionClient = new HttpClient();
                 _notionClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {notionToken}");
@@ -112,10 +123,9 @@ namespace vcrutils
         /// <returns>The page ID if successful, null otherwise</returns>
         public static async Task<string?> CreateNotionInvestorEntry(string domain, string name, string markdownContent)
         {
-            string databaseId = NOTION_INVESTOR_RESEARCH_DATABASE_ID;
-
             try
             {
+                string databaseId = GetNotionDatabaseId();
                 HttpClient client = GetNotionClient();
                 string notionToken = Environment.GetEnvironmentVariable("NOTION_API_KEY");
 
@@ -192,6 +202,7 @@ namespace vcrutils
         {
             try
             {
+                string databaseId = GetNotionDatabaseId();
                 HttpClient client = GetNotionClient();
 
                 try
@@ -212,7 +223,7 @@ namespace vcrutils
                     string searchJson = JsonSerializer.Serialize(searchBody);
                     var searchContent = new StringContent(searchJson, Encoding.UTF8, "application/json");
 
-                    HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent);
+                    HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{databaseId}/query", searchContent);
                     string responseBody = await response.Content.ReadAsStringAsync();
 
                     if (response.IsSuccessStatusCode)
@@ -242,6 +253,7 @@ namespace vcrutils
         {
             try
             {
+                string databaseId = GetNotionDatabaseId();
                 HttpClient client = GetNotionClient();
 
                 try
@@ -262,7 +274,7 @@ namespace vcrutils
                     string searchJson = JsonSerializer.Serialize(searchBody);
                     var searchContent = new StringContent(searchJson, Encoding.UTF8, "application/json");
 
-                    HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", searchContent);
+                    HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{databaseId}/query", searchContent);
                     string responseBody = await response.Content.ReadAsStringAsync();
 
                     if (response.IsSuccessStatusCode)

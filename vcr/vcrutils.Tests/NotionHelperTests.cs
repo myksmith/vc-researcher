@@ -11,6 +11,15 @@ namespace vcrutils.Tests
         public void GetNotionClient_ShouldThrowException_WhenApiKeyNotSet()
         {
             Environment.SetEnvironmentVariable("NOTION_API_KEY", null);
+            Environment.SetEnvironmentVariable("NOTION_DATABASE_ID", "dummy_database_id");
+            Assert.Throws<InvalidOperationException>(() => NotionHelper.GetNotionClient());
+        }
+
+        [Fact]
+        public void GetNotionClient_ShouldThrowException_WhenDatabaseIdNotSet()
+        {
+            Environment.SetEnvironmentVariable("NOTION_API_KEY", "dummy_api_key");
+            Environment.SetEnvironmentVariable("NOTION_DATABASE_ID", null);
             Assert.Throws<InvalidOperationException>(() => NotionHelper.GetNotionClient());
         }
 
@@ -26,6 +35,16 @@ namespace vcrutils.Tests
         public async Task CreateNotionInvestorEntry_ShouldReturnNull_WhenApiKeyNotSet()
         {
             Environment.SetEnvironmentVariable("NOTION_API_KEY", null);
+            Environment.SetEnvironmentVariable("NOTION_DATABASE_ID", "dummy_database_id");
+            string? result = await NotionHelper.CreateNotionInvestorEntry("dummyDomain", "dummyName", "dummyContent");
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task CreateNotionInvestorEntry_ShouldReturnNull_WhenDatabaseIdNotSet()
+        {
+            Environment.SetEnvironmentVariable("NOTION_API_KEY", "dummy_api_key");
+            Environment.SetEnvironmentVariable("NOTION_DATABASE_ID", null);
             string? result = await NotionHelper.CreateNotionInvestorEntry("dummyDomain", "dummyName", "dummyContent");
             Assert.Null(result);
         }
@@ -34,6 +53,16 @@ namespace vcrutils.Tests
         public async Task CheckNotionDomainExists_ShouldReturnFalse_WhenApiKeyNotSet()
         {
             Environment.SetEnvironmentVariable("NOTION_API_KEY", null);
+            Environment.SetEnvironmentVariable("NOTION_DATABASE_ID", "dummy_database_id");
+            bool result = await NotionHelper.CheckNotionDomainExists("dummyDomain");
+            Assert.False(result);
+        }
+
+        [Fact]
+        public async Task CheckNotionDomainExists_ShouldReturnFalse_WhenDatabaseIdNotSet()
+        {
+            Environment.SetEnvironmentVariable("NOTION_API_KEY", "dummy_api_key");
+            Environment.SetEnvironmentVariable("NOTION_DATABASE_ID", null);
             bool result = await NotionHelper.CheckNotionDomainExists("dummyDomain");
             Assert.False(result);
         }
@@ -42,6 +71,16 @@ namespace vcrutils.Tests
         public async Task FindExistingNotionPageId_ShouldReturnNull_WhenApiKeyNotSet()
         {
             Environment.SetEnvironmentVariable("NOTION_API_KEY", null);
+            Environment.SetEnvironmentVariable("NOTION_DATABASE_ID", "dummy_database_id");
+            string? result = await NotionHelper.FindExistingNotionPageId("dummyDomain");
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public async Task FindExistingNotionPageId_ShouldReturnNull_WhenDatabaseIdNotSet()
+        {
+            Environment.SetEnvironmentVariable("NOTION_API_KEY", "dummy_api_key");
+            Environment.SetEnvironmentVariable("NOTION_DATABASE_ID", null);
             string? result = await NotionHelper.FindExistingNotionPageId("dummyDomain");
             Assert.Null(result);
         }

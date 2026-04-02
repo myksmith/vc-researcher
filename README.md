@@ -6,12 +6,19 @@ VCR is a console application designed to facilitate research on venture capital 
 
 ## Environment Setup
 
-Before running the application, ensure that the following environment variables are set with the appropriate API keys:
+Before running the application, ensure that the following environment variables are set with the appropriate API keys and workspace configuration:
 
+### API Keys
 - `SONAR_API_KEY`: Perplexity API
 - `NOTION_API_KEY`: Notion API
 - `ATTIO_API_KEY`: Attio CRM API
 - `MARK2NOTION_API_KEY`: Mark2Notion API
+
+### Workspace Configuration
+- `NOTION_DATABASE_ID`: The ID of your Notion database for investor research
+- `NOTION_DATABASE_NAME`: The name of your Notion database (used for searches)
+- `ATTIO_PRESEED_LIST_NAME`: The name of your Attio list for preseed VCs
+- `ATTIO_STARTUP_LIST_NAME`: The name of your Attio list for startup fundraising
 
 Example:
 ```bash
@@ -19,7 +26,18 @@ export SONAR_API_KEY="your_perplexity_key"
 export NOTION_API_KEY="your_notion_key"
 export ATTIO_API_KEY="your_attio_key"
 export MARK2NOTION_API_KEY="your_mark2notion_key"
+export NOTION_DATABASE_ID="your_notion_database_id"
+export NOTION_DATABASE_NAME="your_database_name"
+export ATTIO_PRESEED_LIST_NAME="your_preseed_list_name"
+export ATTIO_STARTUP_LIST_NAME="your_startup_list_name"
 ```
+
+### Finding Your Configuration Values
+
+- **NOTION_DATABASE_ID**: Copy the database ID from your Notion database URL (the long string after the last slash and before any query parameters)
+- **NOTION_DATABASE_NAME**: The exact name of your investor research database in Notion
+- **ATTIO_PRESEED_LIST_NAME**: The name of your Attio list containing preseed VCs
+- **ATTIO_STARTUP_LIST_NAME**: The name of your Attio list for startup fundraising contacts
 
 ## Usage
 
@@ -60,7 +78,7 @@ dotnet run <command> <investor-domain>
 
 ## Error Handling
 
-The application checks for missing environment variables and will not run until all required API keys are configured. It also handles API errors and provides informative messages for troubleshooting.
+The application checks for missing environment variables and will not run until all required API keys and configuration are set. It also handles API errors and provides informative messages for troubleshooting.
 
 ## Dependencies
 
