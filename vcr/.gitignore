@@ -7,3 +7,4 @@ vcrutils.Tests/bin/
 vcrutils.Tests/obj/
 vcr/bin/
 vcr/obj/
+vcr/node_modules
