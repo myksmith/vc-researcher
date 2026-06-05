@@ -4,3 +4,44 @@ vcr/.DS_Store/*
 vcr/vcr/templist
 vcr/vcr/package.json
 vcr/vcr/package-lock.json
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+dist/
+build/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Cache
+.npm
+.eslintcache
+.cache/
+.parcel-cache/
+
+# OS
+.DS_Store
+Thumbs.db

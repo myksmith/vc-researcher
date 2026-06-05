@@ -10,6 +10,8 @@ using vcrutils;
 
 namespace VCR
 {
+    enum InvestorType { VC, FamilyOffice }
+
     class Program
     {
     // Note: We now update company records directly instead of list-specific records
@@ -26,7 +28,7 @@ namespace VCR
         };
 
         var missingVars = new List<string>();
-        
+
         foreach (var envVar in requiredEnvVars)
         {
             string value = Environment.GetEnvironmentVariable(envVar.Key);
@@ -55,16 +57,31 @@ namespace VCR
 
         Console.WriteLine("✅ All required API keys are configured");
 
+        // Parse --type flag first (can appear anywhere in args list)
+        InvestorType investorType = InvestorType.VC;
+        var argList = new List<string>(args);
+        int typeIdx = argList.IndexOf("--type");
+        if (typeIdx >= 0 && typeIdx + 1 < argList.Count)
+        {
+            string typeVal = argList[typeIdx + 1];
+            if (typeVal.Equals("familyoffice", StringComparison.OrdinalIgnoreCase))
+                investorType = InvestorType.FamilyOffice;
+            argList.RemoveAt(typeIdx + 1);
+            argList.RemoveAt(typeIdx);
+            args = argList.ToArray();
+        }
+
         // Argument validation
         if (args.Length == 0)
         {
-            Console.WriteLine("Usage: dotnet run <investor-domain>");
-            Console.WriteLine("       dotnet run --force-research <investor-domain>");
-            Console.WriteLine("       dotnet run --regen-research <investor-domain>");
+            Console.WriteLine("Usage: dotnet run [--type vc|familyoffice] <investor-domain>");
+            Console.WriteLine("       dotnet run [--type vc|familyoffice] --force-research <investor-domain>");
+            Console.WriteLine("       dotnet run [--type vc|familyoffice] --regen-research <investor-domain>");
             Console.WriteLine("\nExamples:");
-            Console.WriteLine("  dotnet run example-vc.com                    # Create research (aborts if already exists)");
-            Console.WriteLine("  dotnet run --force-research example-vc.com   # Create research even if duplicates exist");
-            Console.WriteLine("  dotnet run --regen-research example-vc.com   # Delete existing research and create new one");
+            Console.WriteLine("  dotnet run example-vc.com                                   # Research a VC (default)");
+            Console.WriteLine("  dotnet run --type familyoffice example-fo.com               # Research a family office");
+            Console.WriteLine("  dotnet run --force-research example-vc.com                  # Create research even if duplicates exist");
+            Console.WriteLine("  dotnet run --regen-research example-vc.com                  # Delete existing research and create new one");
             Console.WriteLine("\nTest commands:");
             Console.WriteLine("  dotnet run --test-notion      # Test Notion API connection");
             Console.WriteLine("  dotnet run --test-notion-insert # Test Notion database entry creation with markdown");
@@ -100,7 +117,7 @@ namespace VCR
             await TestCommands.TestAttioList();
             return;
         }
-        
+
         if (args[0] == "--fix-links")
         {
             if (args.Length < 2)
@@ -109,12 +126,12 @@ namespace VCR
                 Console.WriteLine("Example: dotnet run --fix-links sequoiacap.com");
                 return;
             }
-            
+
             string domain = args[1];
             await FixAttioLinks(domain);
             return;
         }
-        
+
         if (args[0] == "--research-only-no-links")
         {
             if (args.Length < 2)
@@ -125,7 +142,7 @@ namespace VCR
             }
 
             string domain = args[1];
-            await ResearchOnlyNoLinks(domain);
+            await ResearchOnlyNoLinks(domain, investorType);
             return;
         }
 
@@ -139,7 +156,7 @@ namespace VCR
             }
 
             string domain = args[1];
-            await RegenerateResearch(domain);
+            await RegenerateResearch(domain, investorType);
             return;
         }
 
@@ -170,7 +187,7 @@ namespace VCR
             {
                 Console.WriteLine($"🔍 Checking if research already exists for {investorDomain}...");
                 bool domainExists = await NotionHelper.CheckNotionDomainExists(investorDomain);
-                
+
                 if (domainExists)
                 {
                     Console.WriteLine($"✅ Research already exists for {investorDomain} in Notion.");
@@ -184,7 +201,7 @@ namespace VCR
             {
                 Console.WriteLine($"⚠️  Force research mode enabled - will create research even if duplicates exist");
             }
-            
+
             // Step 1: Validate both systems are accessible BEFORE doing expensive Perplexity call
             Console.WriteLine($"🔍 Validating systems for {investorDomain}...");
 
@@ -207,7 +224,7 @@ namespace VCR
             Console.WriteLine("✅ Both Notion database and Attio company record are accessible");
 
             // Step 2: Get analysis from Perplexity (only after confirming records exist)
-            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain);
+            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain, investorType);
             if (perplexityJson == null)
             {
                 Console.WriteLine("❌ Failed to get analysis from Perplexity");
@@ -220,7 +237,7 @@ namespace VCR
             await AddNoteToAttioRecord(attioCompanyId, perplexityJson);
 
             // Step 4: Create Notion research page
-            string? notionPageUrl = await UpdateNotionDatabase("validated", investorDomain, perplexityJson);
+            string? notionPageUrl = await UpdateNotionDatabase("validated", investorDomain, perplexityJson, investorType);
             if (notionPageUrl == null)
             {
                 Console.WriteLine("⚠️  Failed to create Notion page - research saved to Attio but Attio URL not updated");
@@ -241,12 +258,15 @@ namespace VCR
         }
     }
 
-    static async Task<JsonNode?> QueryPerplexityForVCAnalysis(string investorDomain)
+    static async Task<JsonNode?> QueryPerplexityForVCAnalysis(string investorDomain, InvestorType investorType)
     {
         string apiUrl = "https://api.perplexity.ai/chat/completions";
 
-        // Read the investor criteria file
-        string criteriaFilePath = "Neo_Investor_Search_Criteria.md";
+        // Select criteria file based on investor type
+        string criteriaFilePath = investorType == InvestorType.FamilyOffice
+            ? "Neo_FamilyOffice_Search_Criteria.md"
+            : "Neo_Investor_Search_Criteria.md";
+
         string investorCriteria = "";
 
         try
@@ -259,40 +279,33 @@ namespace VCR
             else
             {
                 Console.WriteLine($"Warning: {criteriaFilePath} not found. Proceeding without specific criteria.");
-                investorCriteria = "general venture capital investment criteria";
+                investorCriteria = investorType == InvestorType.FamilyOffice
+                    ? "general family office investment criteria"
+                    : "general venture capital investment criteria";
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error reading criteria file: {ex.Message}");
-            investorCriteria = "general venture capital investment criteria";
+            investorCriteria = investorType == InvestorType.FamilyOffice
+                ? "general family office investment criteria"
+                : "general venture capital investment criteria";
         }
 
         try
         {
             HttpClient client = PerplexityHelper.GetPerplexityClient();
 
+            string prompt = investorType == InvestorType.FamilyOffice
+                ? BuildFamilyOfficePrompt(investorDomain, investorCriteria)
+                : BuildVCPrompt(investorDomain, investorCriteria);
+
             var requestBody = new
             {
                 model = "sonar-pro",
                 messages = new[]
                 {
-                    new
-                    {
-                        role = "user",
-                        content = $"Research the venture capital firm at {investorDomain} and evaluate whether it would be a good fit as an investor, based on the specific criteria provided below.\n\n" +
-                                 $"INVESTOR CRITERIA CONTEXT:\n{investorCriteria}\n\n" +
-                                 $"IMPORTANT: Format your response as proper Markdown. Start your response with exactly this format on the first line:\n" +
-                                 $"VC Name: [Full Name of the VC Firm]\n\n" +
-                                 $"Then provide a comprehensive markdown analysis covering:\n" +
-                                 $"1. How well they match our stage, check size, and sector focus\n" +
-                                 $"2. Their relevant portfolio companies and track record\n" +
-                                 $"3. Geographic alignment and investment thesis fit\n" +
-                                 $"4. Overall recommendation (Strong Fit / Good Fit / Weak Fit / No Fit)\n" +
-                                 $"5. Any specific partners or team members to target\n" +
-                                 $"6. Potential concerns or red flags\n\n" +
-                                 $"Use proper markdown formatting with headers, bullet points, bold text, etc."
-                    }
+                    new { role = "user", content = prompt }
                 }
             };
 
@@ -308,7 +321,7 @@ namespace VCR
                 Console.WriteLine("Response: " + responseBody);
 
                 JsonNode node = JsonNode.Parse(responseBody);
-                return node; // Return the full JSON response
+                return node;
             }
             catch (Exception ex)
             {
@@ -322,6 +335,41 @@ namespace VCR
         }
     }
 
+    static string BuildVCPrompt(string investorDomain, string investorCriteria)
+    {
+        return $"Research the venture capital firm at {investorDomain} and evaluate whether it would be a good fit as an investor, based on the specific criteria provided below.\n\n" +
+               $"INVESTOR CRITERIA CONTEXT:\n{investorCriteria}\n\n" +
+               $"IMPORTANT: Format your response as proper Markdown. Start your response with exactly this format on the first line:\n" +
+               $"VC Name: [Full Name of the VC Firm]\n\n" +
+               $"Then provide a comprehensive markdown analysis covering:\n" +
+               $"1. How well they match our stage, check size, and sector focus\n" +
+               $"2. Their relevant portfolio companies and track record\n" +
+               $"3. Geographic alignment and investment thesis fit\n" +
+               $"4. Overall recommendation (Strong Fit / Good Fit / Weak Fit / No Fit)\n" +
+               $"5. Any specific partners or team members to target\n" +
+               $"6. Potential concerns or red flags\n\n" +
+               $"Use proper markdown formatting with headers, bullet points, bold text, etc.";
+    }
+
+    static string BuildFamilyOfficePrompt(string investorDomain, string investorCriteria)
+    {
+        return $"Research the family office at {investorDomain} and evaluate whether it would be a good fit as a direct investor in an early-stage B2B software company, based on the specific criteria provided below.\n\n" +
+               $"INVESTOR CRITERIA CONTEXT:\n{investorCriteria}\n\n" +
+               $"IMPORTANT: Format your response as proper Markdown. Start your response with exactly this format on the first line:\n" +
+               $"Family Office Name: [Full Name of the Family Office or Family]\n\n" +
+               $"Then provide a comprehensive markdown analysis covering:\n" +
+               $"1. **Nature of investor**: Confirm whether this is a genuine single-family office or multi-family office. If it invests only via funds (LP only), only in real estate, or only in public markets, state that plainly — this likely makes it a poor fit for direct startup investment.\n" +
+               $"2. **Source of wealth and principal**: The founding family, the source of their wealth, and any operating-company ties to telecoms, utilities, banking, transportation, health, or industrials (these sectors are our buyer base — a strategic angle matters more than financial return).\n" +
+               $"3. **Direct startup investing evidence**: Whether they invest DIRECTLY in startups (not only as LP in VC funds). Provide named portfolio companies, deal dates, and check sizes where available — not just stated intent.\n" +
+               $"4. **Investment parameters**: Typical direct-deal check size, preferred stage, sector focus, and whether they have a track record in early-stage B2B software, devtools, or security.\n" +
+               $"5. **Geographic alignment**: Whether they invest in UK/Europe-based companies or cross-border, given our primary market.\n" +
+               $"6. **Decision-maker**: Who actually decides — the principal, a CIO, or a gatekeeper/family-office manager — and any named individual to target.\n" +
+               $"7. **Warm-introduction path**: The most plausible route to a warm introduction (family offices run on trusted intros, not cold inbound).\n" +
+               $"8. **Overall recommendation**: Strong Fit / Good Fit / Weak Fit / No Fit.\n" +
+               $"9. **Concerns / red flags**: Real-estate or public-markets only, no early-stage tech, opaque structure, or no verifiable direct startup activity.\n\n" +
+               $"Use proper markdown formatting with headers, bullet points, bold text, etc.";
+    }
+
     static async Task<string?> ValidateNotionDatabase()
     {
         try
@@ -331,23 +379,23 @@ namespace VCR
             try
             {
                 Console.WriteLine("🔍 Validating Notion Investor Research database...");
-                
+
                 // Try to query the Investor Research database to validate it exists and is accessible
                 var queryBody = new
                 {
                     page_size = 1 // Just get one record to validate access
                 };
-                
+
                 string queryJson = System.Text.Json.JsonSerializer.Serialize(queryBody);
                 var queryContent = new StringContent(queryJson, Encoding.UTF8, "application/json");
-                
+
                 HttpResponseMessage response = await client.PostAsync($"https://api.notion.com/v1/databases/{NotionHelper.NOTION_INVESTOR_RESEARCH_DATABASE_ID}/query", queryContent);
                 string responseBody = await response.Content.ReadAsStringAsync();
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     Console.WriteLine("✅ Notion Investor Research database is accessible");
-                    return "database-validated"; // Return success indicator
+                    return "database-validated";
                 }
                 else
                 {
@@ -415,28 +463,28 @@ namespace VCR
             Console.WriteLine("⚠️  Failed to add Perplexity research note to Attio");
         }
     }
-    
-    static async Task<string?> UpdateNotionDatabase(string recordId, string investorDomain, JsonNode perplexityJson)
+
+    static async Task<string?> UpdateNotionDatabase(string recordId, string investorDomain, JsonNode perplexityJson, InvestorType investorType)
     {
         // Render the JSON to markdown content
         string analysis = RenderPerplexityJsonToMarkdown(perplexityJson);
-        
-        // Extract VC name from the analysis response
-        string vcName = ExtractVCNameFromResponse(analysis);
-        
+
+        // Extract investor name from the analysis response
+        string investorName = ExtractInvestorNameFromResponse(analysis, investorType);
+
         // If extraction failed, fall back to domain-based name
-        if (vcName == "Unknown VC")
+        if (investorName.StartsWith("Unknown "))
         {
-            vcName = investorDomain.Replace(".com", "").Replace(".vc", "").Replace(".", " ");
-            vcName = char.ToUpper(vcName[0]) + vcName.Substring(1);
+            investorName = investorDomain.Replace(".com", "").Replace(".vc", "").Replace(".", " ");
+            investorName = char.ToUpper(investorName[0]) + investorName.Substring(1);
         }
-        
-        string? pageId = await NotionHelper.CreateNotionInvestorEntry(investorDomain, vcName, analysis);
-        
+
+        string? pageId = await NotionHelper.CreateNotionInvestorEntry(investorDomain, investorName, analysis);
+
         if (pageId != null)
         {
             string notionUrl = $"https://notion.so/{pageId.Replace("-", "")}";
-            Console.WriteLine($"Created Notion entry for {vcName}: {notionUrl}");
+            Console.WriteLine($"Created Notion entry for {investorName}: {notionUrl}");
             return notionUrl;
         }
         else
@@ -455,7 +503,7 @@ namespace VCR
             try
             {
                 Console.WriteLine($"🔍 Searching for {investorDomain} in Attio company records...");
-                
+
                 // Step 1: Find the company record by searching
                 string? companyRecordId = await AttioHelper.FindAttioRecord(client, investorDomain);
 
@@ -467,7 +515,7 @@ namespace VCR
 
                 // Step 2: Update the company record with the found record ID
                 bool updated = await AttioHelper.UpdateAttioCompanyRecord(client, companyRecordId, notionUrl);
-                
+
                 if (updated)
                 {
                     Console.WriteLine($"✅ Successfully updated Notion Research URL for {investorDomain}");
@@ -487,59 +535,54 @@ namespace VCR
             Console.WriteLine($"❌ {ex.Message}");
         }
     }
-    
 
 
-    static string ExtractVCNameFromResponse(string response)
+    static string ExtractInvestorNameFromResponse(string response, InvestorType type)
     {
-        // Look for "VC Name: [name]" at the beginning of the response
+        string header = type == InvestorType.FamilyOffice ? "Family Office Name:" : "VC Name:";
+        string fallback = type == InvestorType.FamilyOffice ? "Unknown Family Office" : "Unknown VC";
+
         var lines = response.Split('\n');
         if (lines.Length > 0)
         {
             string firstLine = lines[0].Trim();
-            if (firstLine.StartsWith("VC Name:", StringComparison.OrdinalIgnoreCase))
+            if (firstLine.StartsWith(header, StringComparison.OrdinalIgnoreCase))
             {
-                string vcName = firstLine.Substring(8).Trim(); // Remove "VC Name:" prefix
-                
-                // Clean markdown formatting (remove ** and other markdown symbols)
-                vcName = vcName.Replace("**", "").Replace("*", "").Trim();
-                
-                if (!string.IsNullOrEmpty(vcName))
-                {
-                    return vcName;
-                }
+                string name = firstLine.Substring(header.Length).Trim();
+                name = name.Replace("**", "").Replace("*", "").Trim();
+                if (!string.IsNullOrEmpty(name))
+                    return name;
             }
         }
-        
-        // Fallback: derive from domain if parsing fails
-        return "Unknown VC";
+
+        return fallback;
     }
 
 
-    
+
     static async Task FixAttioLinks(string investorDomain)
     {
         try
         {
             Console.WriteLine($"🔗 Fixing Attio links for {investorDomain}...");
-            
+
             // Step 1: Look up existing Notion research page
             Console.WriteLine($"🔍 Looking up existing Notion research for {investorDomain}...");
             string? notionUrl = await FindExistingNotionResearch(investorDomain);
-            
+
             if (notionUrl == null)
             {
                 Console.WriteLine($"❌ No existing Notion research found for {investorDomain}");
                 Console.WriteLine("   Use the regular workflow to create new research first.");
                 return;
             }
-            
+
             Console.WriteLine($"✅ Found existing Notion research: {notionUrl}");
-            
+
             // Step 2: Update Attio records with the URL (skip Perplexity and Notion creation)
             Console.WriteLine($"🔄 Updating Attio database links...");
             await UpdateAttioCRM("fix-links-mode", investorDomain, notionUrl);
-            
+
             Console.WriteLine($"🎉 Successfully updated Attio links for {investorDomain}!");
         }
         catch (Exception ex)
@@ -547,27 +590,28 @@ namespace VCR
             Console.WriteLine($"❌ Error fixing links for {investorDomain}: {ex.Message}");
         }
     }
-    
-    static async Task ResearchOnlyNoLinks(string investorDomain)
+
+    static async Task ResearchOnlyNoLinks(string investorDomain, InvestorType investorType)
     {
         try
         {
-            Console.WriteLine($"🔍 Research-only mode for {investorDomain} (no Attio updates)...");
-            
+            string typeLabel = investorType == InvestorType.FamilyOffice ? "family office" : "VC";
+            Console.WriteLine($"🔍 Research-only mode for {investorDomain} ({typeLabel}, no Attio updates)...");
+
             // Step 1: Get analysis from Perplexity
-            Console.WriteLine($"🧠 Querying Perplexity for VC analysis...");
-            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain);
+            Console.WriteLine($"🧠 Querying Perplexity for analysis...");
+            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain, investorType);
             if (perplexityJson == null)
             {
                 Console.WriteLine("❌ Failed to get analysis from Perplexity");
                 return;
             }
             Console.WriteLine("✅ Completed Perplexity analysis");
-            
+
             // Step 2: Create Notion research entry
             Console.WriteLine($"📝 Creating Notion research entry...");
-            string? notionUrl = await UpdateNotionDatabase("research-only-mode", investorDomain, perplexityJson);
-            
+            string? notionUrl = await UpdateNotionDatabase("research-only-mode", investorDomain, perplexityJson, investorType);
+
             if (notionUrl != null)
             {
                 Console.WriteLine($"✅ Successfully created Notion research entry: {notionUrl}");
@@ -583,8 +627,8 @@ namespace VCR
             Console.WriteLine($"❌ Error in research-only mode for {investorDomain}: {ex.Message}");
         }
     }
-    
-    
+
+
 
     static async Task<string?> FindExistingNotionResearch(string investorDomain)
     {
@@ -596,7 +640,7 @@ namespace VCR
         return null;
     }
 
-    static async Task RegenerateResearch(string investorDomain)
+    static async Task RegenerateResearch(string investorDomain, InvestorType investorType)
     {
         try
         {
@@ -645,7 +689,7 @@ namespace VCR
             Console.WriteLine("✅ Both Notion database and Attio company record are accessible");
 
             // Step 4: Get analysis from Perplexity
-            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain);
+            JsonNode? perplexityJson = await QueryPerplexityForVCAnalysis(investorDomain, investorType);
             if (perplexityJson == null)
             {
                 Console.WriteLine("❌ Failed to get analysis from Perplexity");
@@ -658,7 +702,7 @@ namespace VCR
             await AddNoteToAttioRecord(attioCompanyId, perplexityJson);
 
             // Step 6: Create new Notion research page
-            string? notionPageUrl = await UpdateNotionDatabase("regenerated", investorDomain, perplexityJson);
+            string? notionPageUrl = await UpdateNotionDatabase("regenerated", investorDomain, perplexityJson, investorType);
             if (notionPageUrl == null)
             {
                 Console.WriteLine("⚠️  Failed to create new Notion page - research saved to Attio but Attio URL not updated");
