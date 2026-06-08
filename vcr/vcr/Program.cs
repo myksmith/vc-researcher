@@ -329,7 +329,8 @@ namespace VCR
                 messages = new[]
                 {
                     new { role = "user", content = prompt }
-                }
+                },
+                search_domain_filter = new[] { investorDomain }
             };
 
             string jsonBody = System.Text.Json.JsonSerializer.Serialize(requestBody);

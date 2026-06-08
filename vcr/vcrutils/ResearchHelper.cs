@@ -4,7 +4,7 @@ namespace vcrutils
     {
         public static string BuildVCPrompt(string investorDomain, string investorCriteria)
         {
-            return $"Research the venture capital firm at {investorDomain} and evaluate whether it would be a good fit as an investor, based on the specific criteria provided below.\n\n" +
+            return $"Research the venture capital firm at https://{investorDomain} — visit the website directly to find their portfolio, team, and investment focus before relying on third-party sources — and evaluate whether it would be a good fit as an investor, based on the specific criteria provided below.\n\n" +
                    $"INVESTOR CRITERIA CONTEXT:\n{investorCriteria}\n\n" +
                    $"IMPORTANT: Format your response as proper Markdown. Start your response with exactly this format on the first line:\n" +
                    $"VC Name: [Full Name of the VC Firm]\n\n" +
@@ -20,7 +20,7 @@ namespace vcrutils
 
         public static string BuildFamilyOfficePrompt(string investorDomain, string investorCriteria)
         {
-            return $"Research the family office at {investorDomain} and evaluate whether it would be a good fit as a direct investor in an early-stage B2B software company, based on the specific criteria provided below.\n\n" +
+            return $"Research the family office at https://{investorDomain} — visit the website directly to find their portfolio, team, and investment focus before relying on third-party sources — and evaluate whether it would be a good fit as a direct investor in an early-stage B2B software company, based on the specific criteria provided below.\n\n" +
                    $"INVESTOR CRITERIA CONTEXT:\n{investorCriteria}\n\n" +
                    $"IMPORTANT: Format your response as proper Markdown. Start your response with exactly this format on the first line:\n" +
                    $"Family Office Name: [Full Name of the Family Office or Family]\n\n" +
