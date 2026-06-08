@@ -36,7 +36,7 @@ namespace VCR
             }
         }
 
-        if (missingVars.Count > 0)
+        if (missingVars.Count > 0 && !args.Contains("--test-query"))
         {
             Console.WriteLine("❌ Missing required environment variables:");
             foreach (var missing in missingVars)
@@ -88,6 +88,7 @@ namespace VCR
             Console.WriteLine("\nUtility commands:");
             Console.WriteLine("  dotnet run --fix-links <domain> # Update Attio with existing Notion research URL (no new research)");
             Console.WriteLine("  dotnet run --research-only-no-links <domain> # Create new research in Notion only (no Attio updates)");
+            Console.WriteLine("  dotnet run [--type vc|familyoffice] --test-query <domain> # Print the Perplexity prompt without calling the API");
             return;
         }
 
@@ -113,6 +114,20 @@ namespace VCR
         if (args[0] == "--test-attio-list")
         {
             await TestCommands.TestAttioList();
+            return;
+        }
+
+        if (args[0] == "--test-query")
+        {
+            if (args.Length < 2)
+            {
+                Console.WriteLine("❌ Usage: dotnet run [--type vc|familyoffice] --test-query <investor-domain>");
+                Console.WriteLine("Example: dotnet run --test-query sequoiacap.com");
+                return;
+            }
+
+            string domain = args[1];
+            await PrintPerplexityQuery(domain, investorType);
             return;
         }
 
@@ -256,11 +271,8 @@ namespace VCR
         }
     }
 
-    static async Task<JsonNode?> QueryPerplexityForVCAnalysis(string investorDomain, InvestorType investorType)
+    static async Task<string> BuildPerplexityPrompt(string investorDomain, InvestorType investorType)
     {
-        string apiUrl = "https://api.perplexity.ai/chat/completions";
-
-        // Select criteria file based on investor type
         string criteriaFilePath = investorType == InvestorType.FamilyOffice
             ? "Neo_FamilyOffice_Search_Criteria.md"
             : "Neo_Investor_Search_Criteria.md";
@@ -290,13 +302,26 @@ namespace VCR
                 : "general venture capital investment criteria";
         }
 
+        return investorType == InvestorType.FamilyOffice
+            ? BuildFamilyOfficePrompt(investorDomain, investorCriteria)
+            : BuildVCPrompt(investorDomain, investorCriteria);
+    }
+
+    static async Task PrintPerplexityQuery(string investorDomain, InvestorType investorType)
+    {
+        string prompt = await BuildPerplexityPrompt(investorDomain, investorType);
+        Console.WriteLine(prompt);
+    }
+
+    static async Task<JsonNode?> QueryPerplexityForVCAnalysis(string investorDomain, InvestorType investorType)
+    {
+        string apiUrl = "https://api.perplexity.ai/chat/completions";
+
         try
         {
             HttpClient client = PerplexityHelper.GetPerplexityClient();
 
-            string prompt = investorType == InvestorType.FamilyOffice
-                ? BuildFamilyOfficePrompt(investorDomain, investorCriteria)
-                : BuildVCPrompt(investorDomain, investorCriteria);
+            string prompt = await BuildPerplexityPrompt(investorDomain, investorType);
 
             var requestBody = new
             {
