@@ -2,17 +2,22 @@
 
 ## Introduction
 This document summarises the search criteria for evaluating family offices as direct investors in Neo's $3M seed raise.
-Family offices behave differently from institutional VC funds: they invest from their own balance sheet, have no LP obligations, and often prioritise strategic or relationship-driven returns alongside financial ones.
-The key question is not "do they have a thesis?" but "do they write direct early-stage cheques, and does their wealth or portfolio create a strategic angle for Neo?"
+
+We're looking for their desire to write direct early-stage cheques, and does their wealth or portfolio create a strategic angle for Neo.
+
+## What to search for
+
+Prior investments - be sure to look for their portfolio and what those companies do.
 
 ## What Makes a Family Office a Strong Fit
 
 **Direct investment behaviour (essential):**
-Family offices that invest DIRECTLY in early-stage startups — not only as LP in VC funds, and not only in real estate or public markets.
+Family offices that invest DIRECTLY in early-stage startups, and not only in real estate or public markets.
 Evidence of named portfolio companies with deal dates and disclosed check sizes is strongly preferred over stated intent alone.
 
 **Source of wealth and strategic alignment:**
 Families whose wealth originates from, or who have operating ties to, any of the following sectors — our buyer base — are a strategic fit:
+
 - Telecoms and communications infrastructure
 - Utilities and energy
 - Banking, insurance, and financial services
@@ -20,7 +25,6 @@ Families whose wealth originates from, or who have operating ties to, any of the
 - Health, pharma, and medtech
 - Industrials and manufacturing
 
-A strategic angle (portfolio synergy, distribution potential, sector credibility) matters more than pure financial return for a family office.
 If the family has operating businesses or portfolio companies in these verticals, that is a strong signal.
 
 **Stage and check size:**
@@ -53,6 +57,7 @@ Multi-committee approval structures are slower but not disqualifying if a named 
 Family offices rely almost exclusively on trusted introductions.
 Cold inbound rarely converts.
 Research should surface:
+
 - Shared LP relationships (family offices often co-invest with VC funds they back as LPs)
 - Operating-company ties that overlap with Neo's network or customer base
 - Named advisors, board members, or intermediaries linked to the family office
