@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Runtime.Caching;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -18,6 +19,9 @@ namespace vcrutils
     {
         // Singleton HTTP Client
         private static HttpClient? _attioClient;
+
+        // MemoryCache for caching API responses
+        private static readonly MemoryCache cache = MemoryCache.Default;
 
         // HTTP Client Helper Method (Singleton)
         public static HttpClient GetAttioClient()
@@ -38,6 +42,12 @@ namespace vcrutils
 
         public static async Task<string?> FindAttioRecord(HttpClient client, string investorDomain)
         {
+            string cacheKey = $"attioRecord_{investorDomain}";
+            if (cache.Contains(cacheKey))
+            {
+                return cache.Get(cacheKey) as string;
+            }
+
             try
             {
                 Console.WriteLine($"🔍 Searching for company record matching {investorDomain}...");
@@ -72,6 +82,7 @@ namespace vcrutils
                         if (!string.IsNullOrEmpty(recordId))
                         {
                             Console.WriteLine($"✅ Found company record: {companyName ?? "Unknown"} (ID: {recordId})");
+                            cache.Set(cacheKey, recordId, DateTimeOffset.Now.AddMinutes(10));
                             return recordId;
                         }
                     }

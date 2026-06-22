@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Runtime.Caching;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -15,6 +16,9 @@ namespace vcrutils
 
         // Singleton HTTP Client
         private static HttpClient? _notionClient;
+
+        // MemoryCache for caching API responses
+        private static readonly MemoryCache cache = MemoryCache.Default;
 
         // HTTP Client Helper Method (Singleton)
         public static HttpClient GetNotionClient()
@@ -190,6 +194,12 @@ namespace vcrutils
 
         public static async Task<bool> CheckNotionDomainExists(string investorDomain)
         {
+            string cacheKey = $"notionDomainExists_{investorDomain}";
+            if (cache.Contains(cacheKey))
+            {
+                return (bool)cache.Get(cacheKey);
+            }
+
             try
             {
                 HttpClient client = GetNotionClient();
@@ -220,7 +230,9 @@ namespace vcrutils
                         JsonNode node = JsonNode.Parse(responseBody);
                         var results = node?["results"]?.AsArray();
 
-                        return results != null && results.Count > 0;
+                        bool exists = results != null && results.Count > 0;
+                        cache.Set(cacheKey, exists, DateTimeOffset.Now.AddMinutes(10));
+                        return exists;
                     }
 
                     return false;
@@ -240,6 +252,12 @@ namespace vcrutils
 
         public static async Task<string?> FindExistingNotionPageId(string investorDomain)
         {
+            string cacheKey = $"notionPageId_{investorDomain}";
+            if (cache.Contains(cacheKey))
+            {
+                return cache.Get(cacheKey) as string;
+            }
+
             try
             {
                 HttpClient client = GetNotionClient();
@@ -278,6 +296,7 @@ namespace vcrutils
 
                             if (!string.IsNullOrEmpty(pageId))
                             {
+                                cache.Set(cacheKey, pageId, DateTimeOffset.Now.AddMinutes(10));
                                 return pageId;
                             }
                         }
