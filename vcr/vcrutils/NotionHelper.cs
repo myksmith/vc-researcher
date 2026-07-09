@@ -10,8 +10,9 @@ namespace vcrutils
 {
     public static class NotionHelper
     {
-        // Global constants
-        public const string NOTION_INVESTOR_RESEARCH_DATABASE_ID = "27b6ef03-8cf6-8059-9860-c0ec6873c896";
+        public static string NOTION_INVESTOR_RESEARCH_DATABASE_ID =>
+            Environment.GetEnvironmentVariable("NOTION_DATABASE_ID")
+            ?? throw new InvalidOperationException("NOTION_DATABASE_ID environment variable not set");
 
         // Singleton HTTP Client
         private static HttpClient? _notionClient;
