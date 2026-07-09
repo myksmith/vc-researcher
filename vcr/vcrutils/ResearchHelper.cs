@@ -26,10 +26,10 @@ namespace vcrutils
                    $"Family Office Name: [Full Name of the Family Office or Family]\n\n" +
                    $"Then provide a comprehensive markdown analysis covering:\n" +
                    $"1. **Nature of investor**: Confirm whether this is a genuine single-family office or multi-family office. If it invests only via funds (LP only), only in real estate, or only in public markets, state that plainly — this likely makes it a poor fit for direct startup investment.\n" +
-                   $"2. **Source of wealth and principal**: The founding family, the source of their wealth, and any operating-company ties to telecoms, utilities, banking, transportation, health, or industrials (these sectors are our buyer base — a strategic angle matters more than financial return).\n" +
+                   $"2. **Source of wealth and principal**: The founding family, the source of their wealth, and any operating-company ties to sectors relevant to the company's target customers (refer to the criteria above for strategic sector alignment).\n" +
                    $"3. **Direct startup investing evidence**: Whether they invest DIRECTLY in startups (not only as LP in VC funds). Provide named portfolio companies, deal dates, and check sizes where available — not just stated intent.\n" +
-                   $"4. **Investment parameters**: Typical direct-deal check size, preferred stage, sector focus, and whether they have a track record in early-stage B2B software, devtools, or security.\n" +
-                   $"5. **Geographic alignment**: Whether they invest in UK/Europe-based companies or cross-border, given our primary market.\n" +
+                   $"4. **Investment parameters**: Typical direct-deal check size, preferred stage, sector focus, and whether they have a track record in the relevant sector as described in the criteria above.\n" +
+                   $"5. **Geographic alignment**: Whether they invest in companies based in the geographies described in the criteria above, or cross-border.\n" +
                    $"6. **Decision-maker**: Who actually decides — the principal, a CIO, or a gatekeeper/family-office manager — and any named individual to target.\n" +
                    $"7. **Warm-introduction path**: The most plausible route to a warm introduction (family offices run on trusted intros, not cold inbound).\n" +
                    $"8. **Overall recommendation**: Strong Fit / Good Fit / Weak Fit / No Fit.\n" +

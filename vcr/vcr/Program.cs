@@ -21,6 +21,7 @@ namespace VCR
         {
             { "SONAR_API_KEY", "Perplexity API" },
             { "NOTION_API_KEY", "Notion API" },
+            { "NOTION_DATABASE_ID", "Notion Investor Research Database ID" },
             { "ATTIO_API_KEY", "Attio CRM API" },
             { "MARK2NOTION_API_KEY", "Mark2Notion API" }
         };
@@ -267,8 +268,8 @@ namespace VCR
     static async Task<string> BuildPerplexityPrompt(string investorDomain, InvestorType investorType)
     {
         string criteriaFilePath = investorType == InvestorType.FamilyOffice
-            ? "Neo_FamilyOffice_Search_Criteria.md"
-            : "Neo_Investor_Search_Criteria.md";
+            ? (Environment.GetEnvironmentVariable("FO_CRITERIA_FILE") ?? "family_office_criteria.md")
+            : (Environment.GetEnvironmentVariable("VC_CRITERIA_FILE") ?? "investor_criteria.md");
 
         string investorCriteria = "";
 

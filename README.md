@@ -80,14 +80,14 @@ The application looks up each investor by domain in Attio before running researc
 
 ### 5. Investor Criteria
 
-Copy the example criteria files and fill them in with your own fundraising context:
+The repo includes generic template criteria files at `vcr/vcr/investor_criteria.md` and `vcr/vcr/family_office_criteria.md`. Edit these in place, or keep your criteria in a separate private repository and point to them via environment variables:
 
 ```bash
-cp investor_criteria.example.md investor_criteria.md
-cp family_office_criteria.example.md family_office_criteria.md
+export VC_CRITERIA_FILE="/path/to/your/investor_criteria.md"
+export FO_CRITERIA_FILE="/path/to/your/family_office_criteria.md"
 ```
 
-Edit each file to describe your startup, target raise, check size, sector focus, and geography. The more specific your criteria, the more relevant the Perplexity analysis will be.
+If these variables are not set, the app falls back to the template files in the project directory. The more specific your criteria, the more relevant the Perplexity analysis will be.
 
 ### Verify setup
 
@@ -96,7 +96,6 @@ Run the built-in connectivity tests before doing real research:
 ```bash
 dotnet run --test-notion        # confirms Notion integration and database access
 dotnet run --ping-attio         # confirms Attio API connectivity
-dotnet run --test-attio-list    # lists your Attio lists
 dotnet run --test-query sequoiacap.com  # prints the Perplexity prompt without calling the API
 ```
 
