@@ -84,7 +84,6 @@ namespace VCR
             Console.WriteLine("  dotnet run --test-notion      # Test Notion API connection");
             Console.WriteLine("  dotnet run --test-notion-insert # Test Notion database entry creation with markdown");
             Console.WriteLine("  dotnet run --ping-attio       # Ping Attio API for basic connectivity");
-            Console.WriteLine("  dotnet run --test-attio-list  # Test Attio list lookup for both target databases");
             Console.WriteLine("\nUtility commands:");
             Console.WriteLine("  dotnet run --fix-links <domain> # Update Attio with existing Notion research URL (no new research)");
             Console.WriteLine("  dotnet run --research-only-no-links <domain> # Create new research in Notion only (no Attio updates)");
@@ -108,12 +107,6 @@ namespace VCR
         if (args[0] == "--ping-attio")
         {
             await TestCommands.PingAttio();
-            return;
-        }
-
-        if (args[0] == "--test-attio-list")
-        {
-            await TestCommands.TestAttioList();
             return;
         }
 
