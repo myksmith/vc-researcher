@@ -19,19 +19,12 @@ namespace vcrutils
         // Singleton HTTP Client
         private static HttpClient? _attioClient;
 
-        // HTTP Client Helper Method (Singleton)
+        // HTTP Client Helper Method
         public static HttpClient GetAttioClient()
         {
             if (_attioClient == null)
             {
-                string attioToken = Environment.GetEnvironmentVariable("ATTIO_API_KEY");
-                if (string.IsNullOrEmpty(attioToken))
-                {
-                    throw new InvalidOperationException("ATTIO_API_KEY environment variable not set");
-                }
-
-                _attioClient = new HttpClient();
-                _attioClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {attioToken}");
+                _attioClient = HttpClientFactory.CreateAttioClient();
             }
             return _attioClient;
         }
