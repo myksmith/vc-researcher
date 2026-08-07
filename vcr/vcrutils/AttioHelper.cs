@@ -60,14 +60,14 @@ namespace vcrutils
                 if (response.IsSuccessStatusCode)
                 {
                     JsonNode node = JsonNode.Parse(responseBody);
-                    var records = node?["data"]?.AsArray();
+                    var records = JsonParser.GetArray(node, "data");
 
                     if (records != null && records.Count > 0)
                     {
                         // Get the first matching record
                         var firstRecord = records[0];
-                        string? recordId = firstRecord?["id"]?["record_id"]?.ToString();
-                        string? companyName = firstRecord?["values"]?["name"]?.AsArray()?[0]?["value"]?.ToString();
+                        string? recordId = JsonParser.GetString(firstRecord?["id"], "record_id");
+                        string? companyName = JsonParser.GetArray(firstRecord?["values"], "name")?[0]?["value"]?.ToString();
 
                         if (!string.IsNullOrEmpty(recordId))
                         {
